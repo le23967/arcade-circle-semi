@@ -5,7 +5,14 @@ import 'leaflet/dist/leaflet.css'
 import { Avatar, GameDot, PrimaryButton, Chip } from '../components/ui.jsx'
 import { Users, Clock, Chevron, Crosshair } from '../components/Icons.jsx'
 import { ME_MAP } from '../data.js'
-import { estimateWaitMin, isStale, freshnessLabel, partiesLabel } from '../lib/queue.js'
+import {
+  estimateWaitMin,
+  isStale,
+  freshnessLabel,
+  machinesLabel,
+  partiesLabel,
+  venueForPlayer,
+} from '../lib/queue.js'
 
 const MAP_CENTRE = [-33.88015, 151.20335]
 const START_ZOOM = 15
@@ -42,13 +49,16 @@ function hueFor(handle) {
   return AVATAR_HUES[value % AVATAR_HUES.length]
 }
 
-/* The pin carries the wait and nothing else.
+/* The pin carries the venue's short name and the wait, on one line.
 
    It used to stack a wait pill on top of a separate name label - 58px of
    marker before the avatars even started - and our three venues land 41px
    apart one zoom out, so the stacks came down on each other and hid the
-   numbers. The name went, the second row went with it, and what is left is one
-   30px pill about 105px wide. The name is on the card the moment you tap.
+   numbers. So the name went and the pin carried the wait alone. The field
+   study showed what that cost: "what is this arcade name? ... Unknown
+   arcade, 31 minutes wait" (finding G). The name is back, inside the same
+   single 30px row rather than as a second one, so the pins stay as short
+   as they were and only grow sideways.
 
    The wait is still spelled out in minutes rather than shortened, which an
    earlier evaluation asked for.
@@ -57,12 +67,19 @@ function hueFor(handle) {
    off on it and back on for the pill, so markers standing close together stop
    stealing each other's taps through invisible padding. The click still
    reaches Leaflet, which listens on the root and gets it by bubbling. */
-const VENUE_ICON = { width: 160, height: 30 }
+const VENUE_ICON = { width: 240, height: 30 }
 
 function makeVenueIcon(arcade, active) {
   const wait = estimateWaitMin(arcade)
-  const waitText = escapeHtml(`${isStale(arcade) ? '~' : ''}${wait} min wait`)
-  const ariaLabel = escapeHtml(`${arcade.short}, about ${wait} minutes wait`)
+  const name = escapeHtml(arcade.short)
+  const waitText = escapeHtml(
+    wait === null ? 'unavailable' : `${isStale(arcade) ? '~' : ''}${wait} min wait`
+  )
+  const ariaLabel = escapeHtml(
+    wait === null
+      ? `${arcade.short}, no working machines`
+      : `${arcade.short}, about ${wait} minutes wait`
+  )
   const dot = active ? 'rgba(255,255,255,0.9)' : arcade.gameColor
 
   return L.divIcon({
@@ -74,6 +91,7 @@ function makeVenueIcon(arcade, active) {
         <button type="button" class="map-marker-button" aria-label="${ariaLabel}" style="display:flex;border:0;background:transparent;padding:0;color:inherit;cursor:pointer;font:inherit;pointer-events:auto;">
           <span class="map-venue-pill" style="display:flex;align-items:center;gap:6px;border:${active ? '0' : '1px solid var(--line)'};border-radius:999px;background:${active ? 'var(--brand-600)' : 'var(--surface)'};padding:6px 12px 6px 9px;color:${active ? '#fff' : 'var(--ink)'};box-shadow:0 8px 20px rgba(24,24,27,0.18);transition:transform 150ms ease,background 150ms ease;">
             <span style="width:8px;height:8px;flex:none;border-radius:999px;background:${dot};"></span>
+            <span style="white-space:nowrap;font-size:12px;font-weight:500;">${name}</span>
             <span style="white-space:nowrap;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;">${waitText}</span>
           </span>
         </button>
@@ -202,6 +220,10 @@ const YOU_ICON = L.divIcon({
    one "see the list" target replaces the five chips. */
 export default function FriendsMap({
   arcades,
+  /* Venues with every game's queue, and the selected game, so a friend's
+     card can find the queue they are actually in. */
+  rawArcades = [],
+  game,
   /* Who is out, already scoped to the people allowed to see you and whom
      you are allowed to see. */
   present = [],
@@ -428,6 +450,7 @@ export default function FriendsMap({
           <FriendCard
             player={friendCard}
             arcade={arcades.find((arcade) => arcade.id === friendCard.at)}
+            queueVenue={venueForPlayer(rawArcades, friendCard, game)}
             joined={joinsSent?.[friendCard.handle] === friendCard.at}
             onJoin={() => onJoin(friendCard.handle, friendCard.at)}
             onUndoJoin={() => onUnsendJoin?.(friendCard.handle)}
@@ -550,11 +573,17 @@ function VenueCard({ arcade, friends, onEnter, onPickFriend, onClose }) {
           </p>
           <p className="flex flex-wrap items-center gap-x-2 text-xs text-ink-muted">
             <span className="inline-flex items-center gap-1 tabular-nums">
-              <Clock size={12} /> ~{estimateWaitMin(arcade)} min
+              <Clock size={12} />{' '}
+              {estimateWaitMin(arcade) === null ? (
+                <span className="text-live">unavailable</span>
+              ) : (
+                `~${estimateWaitMin(arcade)} min`
+              )}
             </span>
             <span className="inline-flex items-center gap-1 tabular-nums">
               <Users size={12} /> {partiesLabel(arcade.queue)}
             </span>
+            <span className="tabular-nums">{machinesLabel(arcade)}</span>
             <span className="tabular-nums">{arcade.distanceKm.toFixed(1)} km</span>
           </p>
           <p className="mt-0.5 text-[11px] text-ink-subtle">
@@ -599,6 +628,8 @@ function VenueCard({ arcade, friends, onEnter, onPickFriend, onClose }) {
 function FriendCard({
   player,
   arcade,
+  /* The queue they are in, for its machine count. */
+  queueVenue = null,
   joined,
   onJoin,
   onUndoJoin,
@@ -618,8 +649,17 @@ function FriendCard({
           </p>
           <p className="truncate text-xs text-ink-muted">
             At {arcade?.short} for {player.sinceMin} min
-            {player.position ? ` · #${player.position} in the queue` : ''}
           </p>
+          {/* "11th in queue can mean different things if there's five
+              cabinets or two": the position always comes with its
+              machines. */}
+          {queueVenue && (
+            <p className="truncate text-xs tabular-nums text-ink-muted">
+              {queueVenue.game}
+              {player.position ? ` · #${player.position} in the queue` : ''} &middot;{' '}
+              {machinesLabel(queueVenue)}
+            </p>
+          )}
           <div className="mt-1 flex flex-wrap gap-1">
             {player.games.slice(0, 2).map((game) => (
               <Chip key={game} tone="quiet">

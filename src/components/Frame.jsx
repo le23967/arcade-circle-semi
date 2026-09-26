@@ -1,4 +1,4 @@
-import { Users, Play, Bars, User } from './Icons.jsx'
+import { Users, Bars, User } from './Icons.jsx'
 
 /* Shell.
 
@@ -45,9 +45,12 @@ function StatusBar() {
   )
 }
 
+/* Three tabs, one per core job: who is out, where to play, and you. Watch
+   was a fourth and is no longer a tab - clips are a way to pass the time in
+   a queue, not a reason to open the app - so it opens from the queue screen,
+   Liked clips and Activity instead. */
 const TABS = [
   { id: 'friends', label: 'Circle', Icon: Users },
-  { id: 'watch', label: 'Watch', Icon: Play },
   { id: 'arcades', label: 'Arcades', Icon: Bars },
   { id: 'me', label: 'Me', Icon: User },
 ]
@@ -63,7 +66,7 @@ export function TabBar({ active, onSelect, banner }) {
   return (
     <div className="border-t border-line bg-surface/95 backdrop-blur">
       {banner}
-      <nav className="grid grid-cols-4 px-1 pb-1 pt-1">
+      <nav className="grid grid-cols-3 px-1 pb-1 pt-1">
         {TABS.map(({ id, label, Icon }) => {
           const on = active === id
           return (

@@ -47,7 +47,8 @@ export default function Liked({ likedIds, onBack, onOpenClip }) {
               Nothing liked yet
             </p>
             <p className="mt-1 text-sm text-ink-muted">
-              Tap the heart on a clip in Watch and it lands here.
+              Tap the heart on a clip, from Activity or while you wait in a
+              queue, and it lands here.
             </p>
           </div>
         ) : (

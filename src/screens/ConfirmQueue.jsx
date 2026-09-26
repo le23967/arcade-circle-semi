@@ -13,9 +13,18 @@ import {
   isStale,
   pairsOf,
   partiesLabel,
+  withParty,
 } from '../lib/queue.js'
 
-/* Check-in, step two: confirm what you can see.
+/* Manual check-in: confirm what you can see.
+
+   This used to be step two of every check-in. The field study moved it
+   (finding C): a scan or a tap now joins on its own, because people wanted
+   "a single QR scan or NFC tap" and nothing to type, and a count is offered
+   afterwards as an optional correction. Manual check-in is the one path
+   left that comes through here, because without a scan the confirmed count
+   is what the check-in has to show for itself. What follows is why the
+   screen is built the way it is.
 
    Reporting used to be a second button sitting next to Check In at the same
    visual weight, which is wrong twice over - it competes with the primary
@@ -37,18 +46,19 @@ import {
    different ways - and a solo player is a party but not a pair, so the two
    readings did not even line up. The party total is derived rather than
    entered. */
-export default function ConfirmQueue({ arcade, onBack, onConfirm }) {
+export default function ConfirmQueue({ arcade, party = 'solo', onBack, onConfirm }) {
   const [pairs, setPairs] = useState(pairsOf(arcade))
   const [solo, setSolo] = useState(arcade.solo)
 
   const queue = pairs + solo
-  const withYou = { ...arcade, queue: queue + 1, solo: solo + 1 }
+  const withYou = { ...arcade, ...withParty({ queue, solo }, party) }
+  const wait = estimateWaitMin(withYou)
   const changed = pairs !== pairsOf(arcade) || solo !== arcade.solo
 
   return (
     <Screen>
       <TopBar
-        title="Confirm queue"
+        title="Manual check-in"
         onBack={onBack}
         right={
           <Info>
@@ -72,7 +82,8 @@ export default function ConfirmQueue({ arcade, onBack, onConfirm }) {
 
         <div className="px-4">
           <p className="pt-3 text-sm font-semibold text-ink">
-            How many are waiting, not counting you?
+            How many are waiting, not counting you
+            {party === 'pair' ? ' and your partner' : ''}?
           </p>
           <Stepper
             label="Pairs waiting"
@@ -93,7 +104,8 @@ export default function ConfirmQueue({ arcade, onBack, onConfirm }) {
             That is {partiesLabel(queue)} waiting
           </p>
           <p className="text-lg font-semibold tabular-nums text-ink">
-            You&rsquo;d be #{queue + 1} &middot; ~{estimateWaitMin(withYou)} min
+            You&rsquo;d be #{queue + 1} &middot;{' '}
+            {wait === null ? 'no working machines' : `~${wait} min`}
           </p>
         </div>
 

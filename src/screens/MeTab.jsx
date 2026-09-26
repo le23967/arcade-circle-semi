@@ -191,7 +191,7 @@ export default function MeTab({
 
           <Disclosure
             title="Privacy and sound"
-            hint={`${visible ? (audience === 'followers' ? 'Seen by followers' : 'Seen by mutuals') : 'Hidden'} · sound ${soundOn ? 'on' : 'off'}`}
+            hint={`${visible ? (audience === 'followers' ? 'Seen by all followers' : 'Seen by mutual friends') : 'Hidden'} · sound ${soundOn ? 'on' : 'off'}`}
             icon={<Shield size={17} />}
           >
             <Toggle
@@ -199,7 +199,9 @@ export default function MeTab({
               onChange={onVisible}
               label={visible ? 'Sharing your arcade' : 'Hidden'}
               hint={
-                visible ? 'People below can see where you are checked in.' : 'Nobody can see where you are.'
+                visible
+                  ? 'The people chosen below can see which arcade you are checked in at. You can also join a queue without sharing, one check-in at a time.'
+                  : 'Nobody can see where you are. You still count in queues, as a guest.'
               }
             />
 
@@ -207,7 +209,10 @@ export default function MeTab({
                 that is still the default. Opening it to everyone who
                 follows you is the person's own call - it is their arcade
                 being shared - which is what keeps the research finding
-                about strangers intact. */}
+                about strangers intact. The field study backed both halves
+                (finding H): sharing "mainly just to people I know", and
+                "control over who can see that I'm there", so the wider
+                option is named plainly and said to be opt-in. */}
             {audience && (
               <div className="mt-2 rounded-xl border border-line bg-surface p-3">
                 <p className="text-sm font-medium text-ink">Who can see where you are</p>
@@ -217,20 +222,20 @@ export default function MeTab({
                     aria-pressed={audience === 'mutuals'}
                     onClick={() => onAudience?.('mutuals')}
                   >
-                    People I follow back
+                    Mutual friends
                   </Seg>
                   <Seg
                     on={audience === 'followers'}
                     aria-pressed={audience === 'followers'}
                     onClick={() => onAudience?.('followers')}
                   >
-                    Anyone who follows me
+                    All followers
                   </Seg>
                 </div>
                 <p className="mt-2 text-xs leading-relaxed text-ink-muted">
                   {audience === 'followers'
-                    ? 'Everyone who follows you can see which arcade you are at, whether or not you follow them back.'
-                    : 'Only people you follow, who follow you too, can see which arcade you are at.'}
+                    ? 'You chose this: everyone who follows you can see which arcade you are at, including people you have not followed back. Switch to Mutual friends to narrow it again.'
+                    : 'Only people you follow who follow you too can see which arcade you are at. This is the default; All followers is only on if you choose it.'}
                 </p>
               </div>
             )}
@@ -264,8 +269,9 @@ export default function MeTab({
             <div className="mt-2 flex items-start gap-2 rounded-xl bg-sunken px-3 py-2.5">
               <Shield size={15} className="mt-0.5 flex-none text-ink-muted" />
               <p className="text-[11px] leading-relaxed text-ink-muted">
-                Only the arcade name is shared. Precise coordinates stay off your profile,
-                and queue updates do not show your handle.
+                Only the arcade name is shared - never your exact location, which
+                machine you are on, or a history of where you have been. Queue
+                updates and machine reports do not show your handle.
               </p>
             </div>
           </Disclosure>

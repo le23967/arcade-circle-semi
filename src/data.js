@@ -21,7 +21,10 @@
    game it runs.
 
    Queue counts and wait times are invented; only the venues, the games and the
-   cabinet counts are real.
+   cabinet counts are real. Machine-condition reports are invented in the
+   same way: the one seeded below is a demo note, not a known fault at that
+   venue. Every cabinet starts working, so any machine shown as out of order
+   is one somebody reported while using the prototype.
 --------------------------------------------------------------------------- */
 
 /* Order matters: this is the order the filter chips appear in.
@@ -51,7 +54,13 @@ export function gameLabel(id) {
 
 /* cabinets = real count. queue = parties waiting, solo = how many of those are
    a single player. Distances are walking distance from UTS Broadway, since the
-   interviews were run by students based there.
+   interviews were run by students based there; the Arcades screen names that
+   origin, because a distance from nowhere was the first thing a participant
+   asked about.
+
+   `cabinets` is how many are installed. `workingCabinets` is how many of
+   those run, and is absent until somebody reports one out of order (see
+   lib/machines.js); `issues` holds the condition reports themselves.
 
    `roster` is the front of the queue in order, naming only the parties that
    checked in through the app. It is deliberately shorter than `queue`: the
@@ -64,13 +73,14 @@ export function gameLabel(id) {
    `map` is the venue's real latitude and longitude, used to place it on the
    map. Presence is still venue level: a pin sits on the building, never on a
    person's actual position. */
-const q = (cabinets, queue, solo, updatedMinsAgo, updatedAt, roster = []) => ({
+const q = (cabinets, queue, solo, updatedMinsAgo, updatedAt, roster = [], issues = []) => ({
   cabinets,
   queue,
   solo,
   updatedMinsAgo,
   updatedAt,
   roster,
+  issues,
 })
 
 export const ARCADES = [
@@ -123,11 +133,16 @@ export const ARCADES = [
     distanceKm: 1.4,
     map: { lat: -33.8765, lng: 151.2065 },
     games: {
-      maimai: q(5, 10, 4, 6, '12:34 PM', [
-        { handle: 'ovo_' },
-        { handle: 'polar', plus: 1 },
-        { handle: 'tsuki' },
-      ]),
+      /* Demo note: a warning, so the cabinet still counts as working. */
+      maimai: q(
+        5,
+        10,
+        4,
+        6,
+        '12:34 PM',
+        [{ handle: 'ovo_' }, { handle: 'polar', plus: 1 }, { handle: 'tsuki' }],
+        [{ id: 'seed-koko-maimai-3', type: 'controls', cabinet: 'Cab 3', note: 'Sticky B button', minsAgo: 25 }]
+      ),
       chunithm: q(3, 5, 3, 4, '12:36 PM', [{ handle: 'ovo_' }, { handle: 'hana' }]),
       sdvx: q(2, 4, 2, 26, '12:14 PM'),
       gitadora: q(1, 1, 1, 11, '12:29 PM'),

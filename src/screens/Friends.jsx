@@ -14,7 +14,7 @@ import {
 import { Plus, Comment, UserPlus } from '../components/Icons.jsx'
 import { FRIENDS, SONGS, OLD_SITE_FAVOURITE_CAP, ACTIVITY } from '../social.js'
 import { GAMES, gameColor, gameLabel } from '../data.js'
-import { resolveVenues } from '../lib/queue.js'
+import { machinesLabel, resolveVenues, venueForPlayer } from '../lib/queue.js'
 import {
   leaderboard,
   belowOldCap,
@@ -196,6 +196,8 @@ export default function Friends({
       {section === 'now' && (
         <Now
           arcades={venues}
+          rawArcades={arcades}
+          game={game}
           following={following}
           present={present}
           presenceHint={presenceHint}
@@ -315,6 +317,8 @@ function Now({ venueId, onClearVenue, onSeeOpen, presenceHint, ...rest }) {
    feed has nothing recent on them. */
 function HereNow({
   arcades,
+  rawArcades = [],
+  game,
   present,
   presenceHint = null,
   venueId,
@@ -396,6 +400,8 @@ function HereNow({
 
           {players.map((p, i) => {
             const signal = playerSignal(p.handle)
+            /* A place in a queue is read against the machines behind it. */
+            const queueVenue = p.position ? venueForPlayer(rawArcades, p, game) : null
             return (
               <div
                 key={p.handle}
@@ -415,6 +421,7 @@ function HereNow({
                     <span className="block truncate text-xs text-ink-muted">
                       {p.games.join(' · ')} &middot; {p.sinceMin}m
                       {p.position ? ` · #${p.position} in the queue` : ''}
+                      {queueVenue ? ` · ${machinesLabel(queueVenue)}` : ''}
                     </span>
                     {signal && (
                       <span className="block truncate text-[11px] text-ink-subtle">

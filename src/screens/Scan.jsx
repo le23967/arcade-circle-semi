@@ -13,8 +13,11 @@ import {
    The sketch draws the cabinet with a QR sticker and NFC tag on it and the
    phone reaching towards it. In a mid-fi build the cabinet is a gray block:
    no photography, no illustration. The "simulate" button stands in for the
-   camera so the flow stays clickable. */
-export default function Scan({ arcade, method, onBack, onSuccess }) {
+   camera so the flow stays clickable.
+
+   A successful read joins the queue there and then - there is no count to
+   confirm first - so the screen says that before the person scans. */
+export default function Scan({ arcade, method, party = 'solo', onBack, onSuccess }) {
   const qr = method === 'qr'
 
   return (
@@ -54,12 +57,16 @@ export default function Scan({ arcade, method, onBack, onSuccess }) {
             ? 'Point your camera at the sticker on the cabinet.'
             : 'Hold the top of your phone against the reader.'}
         </p>
+        <p className="mt-1 text-xs text-ink-muted">
+          You join the {arcade.game} queue as soon as it reads,{' '}
+          {party === 'pair' ? 'with your partner' : 'as a solo player'}.
+        </p>
 
       </Body>
 
       <div className="space-y-2 border-t border-line p-4">
         <PrimaryButton onClick={onSuccess}>
-          Simulate successful {qr ? 'scan' : 'tap'}
+          Simulate {qr ? 'scan' : 'tap'} &middot; join queue
         </PrimaryButton>
         <SecondaryButton onClick={onBack}>Cancel</SecondaryButton>
       </div>

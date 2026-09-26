@@ -196,3 +196,26 @@ export const Shield = (p) => (
     <path d="M12 3.5 19 6v5.5c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9V6Z" />
   </Svg>
 )
+
+export const Star = ({ filled, ...p }) => (
+  <Svg {...p} fill={filled ? 'currentColor' : 'none'}>
+    <path d="m12 4 2.4 5 5.4.7-4 3.7 1 5.4L12 16.2l-4.8 2.6 1-5.4-4-3.7 5.4-.7Z" />
+  </Svg>
+)
+
+export const Search = (p) => (
+  <Svg {...p}>
+    <circle cx="11" cy="11" r="6" />
+    <path d="m20 20-4.5-4.5" />
+  </Svg>
+)
+
+/* An arcade cabinet: screen above, a button and a stick below. */
+export const Cabinet = (p) => (
+  <Svg {...p}>
+    <rect x="6" y="3" width="12" height="18" rx="2" />
+    <rect x="8.5" y="6" width="7" height="5" rx="1" />
+    <circle cx="10" cy="15" r="1" />
+    <path d="M13.5 15h2" />
+  </Svg>
+)

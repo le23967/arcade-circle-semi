@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Screen, TopBar, Body, Avatar, PrimaryButton, clipArt } from '../components/ui.jsx'
-import { Bell, Heart, Comment, Chevron } from '../components/Icons.jsx'
+import { ArrowLeft, Bell, Heart, Comment, Chevron } from '../components/Icons.jsx'
 import { CLIPS } from '../social.js'
 import { gradeOf, formatAchievement } from '../lib/social.js'
 
@@ -8,11 +8,16 @@ const NEARBY_LIMIT_KM = 1
 
 /* Watch.
 
-   A feed, so it behaves like one. There is no title bar: the tab bar already
-   says Watch, and a caption explaining that these are clips from people you
-   follow is the kind of on screen documentation this prototype keeps removing.
-   Following and Nearby float over the clip instead, the way they do in the
-   apps people already use.
+   A feed, so it behaves like one. There is no title bar: a caption
+   explaining that these are clips from people you follow is the kind of on
+   screen documentation this prototype keeps removing. Following and Nearby
+   float over the clip instead, the way they do in the apps people already
+   use.
+
+   It is no longer a tab. Clips are something to do while waiting, so the
+   feed opens from the queue screen - where the turn alert can still pull
+   you back - and from Liked clips and Activity. That makes it a step rather
+   than a place, so a Back control floats over the clip as well.
 
    Swipe up for the next clip and down for the previous one. Swiping down on
    the first clip refreshes. Swiping sideways changes between Following and
@@ -30,13 +35,14 @@ const HINT_MS = 2800
    Watch opens in a session it says "Swipe up for next" once, over the clip,
    and takes itself away after a few seconds or the moment you do anything.
 
-   Once per session rather than once per mount: the tab remounts this screen
-   every time you come back to it, and a cue that returned each time would be
+   Once per session rather than once per mount: the feed remounts every time
+   you open it again, and a cue that returned each time would be
    an ad rather than a hint. The flag resets on reload, which is the length of
    one run through the prototype. */
 let gestureHintShown = false
 
 export default function Watch({
+  onBack,
   clips = CLIPS,
   index,
   onIndex,
@@ -255,6 +261,17 @@ export default function Watch({
               onComments={onComments}
             />
           </div>
+        )}
+
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="Back"
+            className="absolute left-2 top-2 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur transition-colors duration-150 hover:bg-black/50"
+          >
+            <ArrowLeft size={20} />
+          </button>
         )}
 
         {/* Floating over the clip, the way a feed does it. */}

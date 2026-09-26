@@ -681,17 +681,19 @@ export function AlertBanner({ avatar, title, text, onOpen, onClose, openLabel })
   )
 }
 
+/* A sheet taller than the frame scrolls under its title rather than being
+   cut off at the top. */
 export function Modal({ title, children }) {
   return (
     <div className="anim-scrim absolute inset-0 z-20 flex items-end bg-ink/40">
-      <div className="anim-sheet w-full rounded-t-2xl border-t border-line bg-surface shadow-2xl">
-        <div className="flex justify-center pt-2">
+      <div className="anim-sheet flex max-h-full w-full flex-col rounded-t-2xl border-t border-line bg-surface shadow-2xl">
+        <div className="flex flex-none justify-center pt-2">
           <span className="h-1 w-9 rounded-full bg-line-strong" />
         </div>
-        <div className="border-b border-line px-4 py-3">
+        <div className="flex-none border-b border-line px-4 py-3">
           <h2 className="font-display text-base font-semibold text-ink">{title}</h2>
         </div>
-        <div className="p-4">{children}</div>
+        <div className="min-h-0 overflow-y-auto p-4">{children}</div>
       </div>
     </div>
   )

@@ -5,7 +5,10 @@ import {
   venueGame,
   venuesForGame,
   otherGamesAt,
+  withParty,
+  withoutParty,
 } from './lib/queue.js'
+import { reportIssue, markWorking } from './lib/machines.js'
 import { Frame, TabBar, SessionBanner, TAB_IDS, tabLabel } from './components/Frame.jsx'
 import { PrimaryButton, SecondaryButton, AlertBanner, Avatar } from './components/ui.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
@@ -16,6 +19,7 @@ import CheckIn from './screens/CheckIn.jsx'
 import Scan from './screens/Scan.jsx'
 import ConfirmQueue from './screens/ConfirmQueue.jsx'
 import Report from './screens/Report.jsx'
+import MachineReport from './screens/MachineReport.jsx'
 import CheckedIn from './screens/CheckedIn.jsx'
 import Summary from './screens/Summary.jsx'
 import Directions from './screens/Directions.jsx'
@@ -139,8 +143,20 @@ function Prototype({ auth, initialGame }) {
   const [modal, setModal] = useState(null)
   const [activeId, setActiveId] = useState(null)
   const [scanMethod, setScanMethod] = useState('qr')
-  /* The queue you joined on this phone this run. */
+  /* The queue you joined on this phone this run. It remembers what joining
+     added - one solo party or one pair - so leaving can take back exactly
+     that, whatever has happened to the count since. */
   const [ownSession, setOwnSession] = useState(null)
+  /* What the check-in screen has been told for this join: solo or with a
+     partner, and whether this one check-in is shared. `share` is null until
+     the person changes it, which means "whatever Me says". */
+  const [joinChoice, setJoinChoice] = useState({ party: 'solo', share: null })
+  /* The turn alert has called you: you are on a machine now, so the queue
+     screen offers Check out rather than Leave queue. */
+  const [turnUp, setTurnUp] = useState(false)
+  /* Which queue the count report is correcting - the arcade page's, or the
+     one you are standing in. */
+  const [reportFor, setReportFor] = useState(null)
   const [notify, setNotify] = useState(true)
   const [reports, setReports] = useState(7)
   const [lastSession, setLastSession] = useState(null)
@@ -265,6 +281,27 @@ function Prototype({ auth, initialGame }) {
       return false
     }
   })
+  /* Favourite arcades, kept on this device. A favourite is easier to find;
+     it is never ranked above a faster option. */
+  const [favourites, setFavourites] = useState(() => {
+    try {
+      const list = JSON.parse(window.localStorage.getItem('arcade-circle:favourites') ?? '[]')
+      return Array.isArray(list) ? list.filter((id) => typeof id === 'string') : []
+    } catch {
+      return []
+    }
+  })
+  function toggleFavourite(id) {
+    const next = favourites.includes(id)
+      ? favourites.filter((f) => f !== id)
+      : [...favourites, id]
+    setFavourites(next)
+    try {
+      window.localStorage.setItem('arcade-circle:favourites', JSON.stringify(next))
+    } catch {
+      /* Nothing to remember it in; the star still works this run. */
+    }
+  }
   async function setAlerts(on) {
     if (!on) {
       setAlertsOn(false)
@@ -314,6 +351,10 @@ function Prototype({ auth, initialGame }) {
       position: mine.position ?? venue.queue + 1,
       checkInAt: Date.parse(mine.checked_in_at),
       waitedMin: estimateWaitMin(venue),
+      /* Joined on another phone or before a reload: this run's counts never
+         had the party added, so there is nothing here to take back. */
+      party: null,
+      shared: Boolean(mine.visible),
     }
   }, [myId, presence.mine, arcades])
   const session = ownSession ?? restored
@@ -386,13 +427,14 @@ function Prototype({ auth, initialGame }) {
   }
 
   /* Jumping to a clip from Activity or from Liked lands you in the feed at
-     that clip, rather than opening a one-off player. */
+     that clip, rather than opening a one-off player. Watch is no longer a
+     tab, so the feed is a step like any other screen: the tab you came from
+     stays the tab, and Back returns to the list or the queue you left. */
   function openClip(id) {
     const i = CLIPS.findIndex((c) => c.id === id)
     if (i < 0) return
     setClipIndex(i)
-    setTab('watch')
-    setView('watch')
+    push('watch')
   }
 
   /* Messaging is real: a thread with another account, stored in the
@@ -688,53 +730,102 @@ function Prototype({ auth, initialGame }) {
     push('detail')
   }
 
-  /* Check-in carries the count the person just confirmed at the cabinet, so
-     the next reader gets a verified number rather than a blind +1 on top of an
-     unconfirmed one. */
-  function doCheckIn({ queue, solo }) {
+  /* Check in & join queue starts fresh each time: solo, and shared the way
+     the Me tab says, until the person changes either for this join. */
+  function openCheckIn() {
+    setJoinChoice({ party: 'solo', share: null })
+    setView('checkin')
+  }
+
+  /* Joining puts you in the queue straight away.
+
+     A QR scan or NFC tap is the physical proof that you are at the cabinet,
+     so it joins you on the current count with nothing to fill in (finding
+     C). Nobody looked at the line, though, so the report keeps the age it
+     had: a join must not make an unchecked number look freshly verified
+     (finding E). Manual check-in is the fallback, and there the person has
+     just confirmed the count, so `counted` replaces it and the age resets.
+
+     You are added as one party, solo or pair, and the session remembers
+     which, so leaving takes back exactly that. */
+  function joinQueue({ counted = null } = {}) {
     const target = arcade
-    const position = queue + 1
+    const party = joinChoice.party
+    const shared = joinChoice.share ?? visible
+    const base = counted ?? { queue: target.queue, solo: target.solo }
+    const position = base.queue + 1
 
     patchVenueGame(target.id, target.gameId, {
-      queue: queue + 1,
-      solo: Math.min(solo + 1, queue + 1),
-      updatedMinsAgo: 0,
-      updatedAt: '12:38 PM',
+      ...withParty(base, party),
+      ...(counted ? { updatedMinsAgo: 0, updatedAt: '12:38 PM' } : {}),
     })
 
+    setTurnUp(false)
     setOwnSession({
       arcadeId: target.id,
       gameId: target.gameId,
       position,
       checkInAt: Date.now() - DEMO_SESSION_OFFSET_MIN * 60_000,
-      waitedMin: estimateWaitMin({ ...target, queue, solo }),
+      waitedMin: estimateWaitMin({ ...target, ...base }),
+      party,
+      countVerified: Boolean(counted),
+      shared,
     })
-    /* Shared with the people you follow both ways, if you are signed in
-       and have not gone hidden. */
-    presence.checkIn({ venueId: target.id, gameId: target.gameId, position, visible })
+    /* Shared with the people allowed to see you, unless this check-in was
+       made without sharing. Either way you count in the queue. */
+    presence.checkIn({ venueId: target.id, gameId: target.gameId, position, visible: shared })
     playSound('success')
     setTab('arcades')
     goRoot('checkedin')
   }
 
   /* Both ways out of a queue hand the slot back, so both go through here.
-     Check-in counts you as one more solo party, so leaving has to take that
-     back as well. Dropping only the party count turned one of the venue's
-     pairs into a solo player on every pass: at KOKO on maimai, 10 parties
-     with 4 solo came back as 10 with 5, so the running order drew a pair as
-     a single player and the venue lost one of its 16 players. It compounds,
-     and once enough pairs have been converted the wait falls with them. */
+     They take back the party the session says joining added - not a solo
+     player by default. Assuming solo turned one of the venue's pairs into a
+     solo player on every pass once pairs could join, and it compounds: the
+     running order draws pairs as single players and the wait falls with
+     them. A session restored from another phone added nothing to this run's
+     counts, so it takes nothing away.
+
+     Neither exit touches the report's age. Leaving is not a count. */
   function releaseQueueSlot() {
+    if (!session.party) return
     const target = venueGame(
       arcades.find((a) => a.id === session.arcadeId),
       session.gameId
     )
-    patchVenueGame(target.id, session.gameId, {
-      queue: Math.max(0, target.queue - 1),
-      solo: Math.max(0, target.solo - 1),
+    patchVenueGame(target.id, session.gameId, withoutParty(target, session.party))
+  }
+
+  /* A count correction. When it is the queue you are standing in, the
+     person counts everyone but their own party, which is added back, and
+     their place becomes the one behind everybody they counted - the same
+     rule manual check-in uses. */
+  function submitCount({ queue, solo }) {
+    const target = reportVenue
+    if (!target) return
+    const counts = reportYou ? withParty({ queue, solo }, reportYou) : { queue, solo }
+    patchVenueGame(target.id, target.gameId, {
+      ...counts,
       updatedMinsAgo: 0,
       updatedAt: '12:38 PM',
     })
+    setReports((n) => n + 1)
+    if (reportYou && ownSession) {
+      const position = queue + 1
+      setOwnSession((s) => (s ? { ...s, position } : s))
+      presence.checkIn({
+        venueId: target.id,
+        gameId: target.gameId,
+        position,
+        visible: ownSession.shared,
+      })
+    }
+  }
+
+  function openCountReport(target) {
+    setReportFor({ arcadeId: target.id, gameId: target.gameId })
+    setModal('report')
   }
 
   /* Leaving the queue is not checking out. Nothing was played, so no session
@@ -745,6 +836,7 @@ function Prototype({ auth, initialGame }) {
     presence.checkOut()
     setActiveId(session.arcadeId)
     setOwnSession(null)
+    setTurnUp(false)
     setModal(null)
     setTab('arcades')
     goRoot('detail')
@@ -765,18 +857,43 @@ function Prototype({ auth, initialGame }) {
       waitedMin: session.waitedMin,
     })
     setOwnSession(null)
+    setTurnUp(false)
     setModal(null)
     goRoot('summary')
   }
 
   /* What is drawn as the screen: the view, or the tab under the sheet. */
   const screen = sheetOpen ? backTab : view
-  const showTabs = ['arcades', 'watch', 'friends', 'me', 'detail'].includes(screen)
+  const showTabs = ['arcades', 'friends', 'me', 'detail'].includes(screen)
   const sessionArcade = session
     ? venueGame(
         arcades.find((a) => a.id === session.arcadeId),
         session.gameId
       )
+    : null
+  /* Where you are, for the screens that mark you in a queue or count you
+     among the app check-ins. */
+  const mine = session
+    ? { arcadeId: session.arcadeId, gameId: session.gameId, position: session.position }
+    : null
+  const reportVenue = reportFor
+    ? venueGame(arcades.find((a) => a.id === reportFor.arcadeId), reportFor.gameId)
+    : null
+  /* Your own party, when the count being corrected is the queue you joined
+     here. */
+  const reportYou =
+    ownSession?.party &&
+    reportVenue &&
+    ownSession.arcadeId === reportVenue.id &&
+    ownSession.gameId === reportVenue.gameId
+      ? ownSession.party
+      : null
+  /* Who a check-in is shared with, in the words the Me tab uses. Without an
+     account there is nobody to share it with. */
+  const audienceLabel = myId
+    ? profile?.presence_audience === 'followers'
+      ? 'all followers'
+      : 'mutual friends'
     : null
 
   return (
@@ -789,18 +906,21 @@ function Prototype({ auth, initialGame }) {
           {screen === 'arcades' && (
             <Arcades
               arcades={rows}
-              venueCount={arcades.length}
+              allArcades={arcades}
               game={game}
               onGame={setGame}
               view={arcadeView}
               onView={setArcadeView}
               onOpen={openArcade}
               following={followingHandles}
+              favourites={favourites}
+              mine={mine}
             />
           )}
 
           {screen === 'watch' && (
             <Watch
+              onBack={goBack}
               clips={CLIPS}
               index={clipIndex}
               onIndex={setClipIndex}
@@ -821,6 +941,7 @@ function Prototype({ auth, initialGame }) {
               onComments={() => setModal('comments')}
               onGo={() => {
                 setCalled(false)
+                setTurnUp(true)
                 setTab('arcades')
                 goRoot('checkedin')
               }}
@@ -1056,8 +1177,11 @@ function Prototype({ auth, initialGame }) {
                   : null
               }
               onBack={goBack}
-              onCheckIn={() => setView('checkin')}
-              onReport={() => setModal('report')}
+              onCheckIn={openCheckIn}
+              onReport={() => openCountReport(arcade)}
+              onReportMachine={() => setModal('machine')}
+              favourite={favourites.includes(arcade.id)}
+              onToggleFavourite={() => toggleFavourite(arcade.id)}
               present={present}
               onFriends={() => openHereAt(arcade.id)}
               openCount={
@@ -1070,6 +1194,11 @@ function Prototype({ auth, initialGame }) {
           {screen === 'checkin' && (
             <CheckIn
               arcade={arcade}
+              party={joinChoice.party}
+              onParty={(party) => setJoinChoice((c) => ({ ...c, party }))}
+              share={joinChoice.share ?? visible}
+              onShare={(share) => setJoinChoice((c) => ({ ...c, share }))}
+              audienceLabel={audienceLabel}
               onBack={() => setView('detail')}
               onScan={(method) => {
                 setScanMethod(method)
@@ -1083,16 +1212,20 @@ function Prototype({ auth, initialGame }) {
             <Scan
               arcade={arcade}
               method={scanMethod}
+              party={joinChoice.party}
               onBack={() => setView('checkin')}
-              onSuccess={() => setView('confirm')}
+              onSuccess={() => joinQueue()}
             />
           )}
 
+          {/* Manual check-in only: the one path where the person confirms
+              the count before joining. */}
           {screen === 'confirm' && arcade && (
             <ConfirmQueue
               arcade={arcade}
+              party={joinChoice.party}
               onBack={() => setView('checkin')}
-              onConfirm={doCheckIn}
+              onConfirm={(counted) => joinQueue({ counted })}
             />
           )}
 
@@ -1107,8 +1240,14 @@ function Prototype({ auth, initialGame }) {
                 queue: Math.max(0, session.position - 1),
                 solo: Math.min(sessionArcade.solo, session.position - 1),
               })}
+              party={session.party}
+              shared={session.shared}
+              audienceLabel={audienceLabel}
+              turnUp={turnUp}
               notify={notify}
               onNotify={setNotify}
+              onWatch={() => push('watch')}
+              onUpdateCount={() => openCountReport(sessionArcade)}
               /* Out of the queue screen is back to Circle, where the queue
                  banner keeps the way back in; the arcade page is a step
                  behind you, not a place to be returned to. */
@@ -1208,19 +1347,31 @@ function Prototype({ auth, initialGame }) {
           />
         )}
 
-        {modal === 'report' && arcade && (
+        {modal === 'report' && reportVenue && (
           <Report
+            arcade={reportVenue}
+            you={reportYou}
+            onCancel={() => {
+              setModal(null)
+              setReportFor(null)
+            }}
+            onSubmit={submitCount}
+          />
+        )}
+
+        {/* The machine-condition report: anonymous, and applied to this
+            session's data straight away, so the working count, the wait,
+            the order and Fastest now all answer to it. */}
+        {modal === 'machine' && arcade && (
+          <MachineReport
             arcade={arcade}
             onCancel={() => setModal(null)}
-            onSubmit={({ queue, solo }) => {
-              patchVenueGame(arcade.id, arcade.gameId, {
-                queue,
-                solo,
-                updatedMinsAgo: 0,
-                updatedAt: '12:38 PM',
-              })
-              setReports((n) => n + 1)
-            }}
+            onReport={(report) =>
+              patchVenueGame(arcade.id, arcade.gameId, reportIssue(arcade, report))
+            }
+            onWorking={(issueId) =>
+              patchVenueGame(arcade.id, arcade.gameId, markWorking(arcade, issueId))
+            }
           />
         )}
 

@@ -13,6 +13,8 @@ import {
   partiesLabel,
   peopleOf,
   playersLabel,
+  withParty,
+  withoutParty,
 } from '../lib/queue.js'
 
 /* SCREEN 4B - Report.
@@ -29,15 +31,23 @@ import {
    The two steppers ask for the same two things the arcade page displays. They
    used to ask for total parties and a solo subset while the arcade page showed
    pairs and solo, which is the same line described two ways - and since a solo
-   player is a party but not a pair, the numbers looked like they disagreed. */
-export default function Report({ arcade, onCancel, onSubmit }) {
-  const [pairs, setPairs] = useState(pairsOf(arcade))
-  const [solo, setSolo] = useState(arcade.solo)
+   player is a party but not a pair, the numbers looked like they disagreed.
+
+   It is also the optional check after joining by QR or NFC ("Queue count
+   looks wrong?"). Opened on the queue you are in, `you` says whether you
+   joined solo or as a pair: the steppers then count everyone else, and your
+   own party is added back on submit, so a correction can never drop you out
+   of the count or add you twice. */
+export default function Report({ arcade, you = null, onCancel, onSubmit }) {
+  const others = you ? withoutParty(arcade, you) : { queue: arcade.queue, solo: arcade.solo }
+  const [pairs, setPairs] = useState(pairsOf(others))
+  const [solo, setSolo] = useState(others.solo)
   const [done, setDone] = useState(false)
 
   const queue = pairs + solo
-  const next = { ...arcade, queue, solo }
+  const next = { ...arcade, ...(you ? withParty({ queue, solo }, you) : { queue, solo }) }
   const preview = estimateWaitMin(next)
+  const previewText = preview === null ? 'no working machines' : `~${preview} min`
 
   if (done) {
     return (
@@ -49,8 +59,8 @@ export default function Report({ arcade, onCancel, onSubmit }) {
           <div>
             <p className="text-sm font-semibold text-ink">Queue updated</p>
             <p className="text-xs text-ink-muted">
-              {arcade.short}: {partiesLabel(queue)} waiting &middot;{' '}
-              {playersLabel(peopleOf(next))} &middot; ~{preview} min, timestamped
+              {arcade.short}: {partiesLabel(next.queue)} waiting &middot;{' '}
+              {playersLabel(peopleOf(next))} &middot; {previewText}, timestamped
               now.
             </p>
           </div>
@@ -64,6 +74,13 @@ export default function Report({ arcade, onCancel, onSubmit }) {
 
   return (
     <Modal title={`Report queue, ${arcade.short}`}>
+      {you && (
+        <p className="text-xs text-ink-muted">
+          Count everyone in the queue except you
+          {you === 'pair' ? ' and your partner' : ''}. You are added back, behind
+          the people you count.
+        </p>
+      )}
       <Stepper
         label="Pairs waiting"
         hint="Two players sharing one queue position"
@@ -79,10 +96,11 @@ export default function Report({ arcade, onCancel, onSubmit }) {
 
       <div className="mt-3 rounded-md border border-line bg-sunken px-3 py-2">
         <p className="text-xs text-ink-muted">
-          {partiesLabel(queue)} waiting &middot; {playersLabel(peopleOf(next))}
+          {partiesLabel(next.queue)} waiting &middot; {playersLabel(peopleOf(next))}
+          {you ? ', with you' : ''}
         </p>
         <p className="text-lg font-semibold tabular-nums text-ink">
-          ~{preview} min estimated wait
+          {preview === null ? 'No working machines' : `${previewText} estimated wait`}
         </p>
       </div>
 

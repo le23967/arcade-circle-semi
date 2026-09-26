@@ -20,7 +20,7 @@ export default function Summary({ arcade, sessionMin, waitedMin, onDone }) {
 
         <dl>
           <Line label="Session time" value={`${sessionMin} min`} />
-          <Line label="Time queued" value={`${waitedMin} min`} />
+          <Line label="Time queued" value={waitedMin === null ? 'Not estimated' : `${waitedMin} min`} />
           <Line label="Arcade" value={arcade.short} />
         </dl>
 
