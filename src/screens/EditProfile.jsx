@@ -87,8 +87,7 @@ export default function EditProfile({ me, onSave, onBack }) {
           <p
             className={`mt-1.5 text-xs ${problem ? 'font-medium text-live' : 'text-ink-muted'}`}
           >
-            {problem ??
-              `This is what people see on the map, in a queue and on a score. ${MAX_HANDLE - trimmed.length} left.`}
+            {problem ?? `${MAX_HANDLE - trimmed.length} left`}
           </p>
         </div>
 
@@ -117,10 +116,6 @@ export default function EditProfile({ me, onSave, onBack }) {
               </button>
             ))}
           </div>
-          <p className="mt-2.5 text-xs text-ink-muted">
-            No photo to upload. Your initials and colour are what make you
-            recognisable in a list.
-          </p>
         </div>
       </Body>
 

@@ -26,10 +26,7 @@ export default function Scan({ arcade, method, party = 'solo', onBack, onSuccess
       <Body className="flex flex-col items-center px-6 pt-8">
         {qr ? <Viewfinder /> : <Reader />}
 
-        <p className="mt-6 text-center text-base font-semibold text-ink">
-          {qr ? 'Point at the QR on the machine' : 'Hold your phone to the reader'}
-        </p>
-        <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+        <div className="mt-6 flex flex-wrap justify-center gap-1.5">
           <Stat pill tone="ink" icon={<GameDot color={arcade.gameColor} />}>
             {arcade.game}
           </Stat>

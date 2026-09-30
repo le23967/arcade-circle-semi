@@ -108,7 +108,7 @@ export default function Auth({
           return
         }
         if (result.needsConfirmation) {
-          setNotice('Check your email to confirm your account, then sign in here.')
+          setNotice('Confirm your email, then sign in')
           setMode('signin')
           setPassword('')
         }
@@ -129,11 +129,6 @@ export default function Auth({
     <Screen>
       <TopBar
         title={signup ? 'Create account' : 'Sign in'}
-        subtitle={
-          signup
-            ? 'Pick a username people can search for.'
-            : 'Sign in to sync your follows and messages.'
-        }
         onBack={onBack}
       />
 
@@ -154,7 +149,7 @@ export default function Auth({
                 <Field
                   id="auth-handle"
                   label="Username"
-                  hint={handleProblem ?? 'Letters, numbers and underscores. This is what people search for.'}
+                  hint={handleProblem ?? 'Letters, numbers, _'}
                   problem={Boolean(handleProblem)}
                 >
                   <input
@@ -217,16 +212,13 @@ export default function Auth({
                 it; empty, it takes no room. */}
             <div aria-live="polite" className="space-y-3 [&:not(:empty)]:mt-4">
               {!configured && (
-                <p className="rounded-xl border border-stale bg-stale-bg px-3 py-2.5 text-xs leading-relaxed text-ink">
-                  Accounts are not set up on this build. Add{' '}
-                  <code className="font-mono">VITE_SUPABASE_URL</code> and{' '}
-                  <code className="font-mono">VITE_SUPABASE_PUBLISHABLE_KEY</code> to a local
-                  env file to turn them on.
+                <p className="rounded-xl border border-stale bg-stale-bg px-3 py-2.5 text-xs text-ink">
+                  Accounts unavailable
                 </p>
               )}
               {restoreError && !error && !notice && (
                 <p role="alert" className="rounded-xl border border-stale bg-stale-bg px-3 py-2.5 text-xs leading-relaxed text-ink">
-                  {restoreError} Sign in again to continue.
+                  {restoreError}
                 </p>
               )}
               {error && (

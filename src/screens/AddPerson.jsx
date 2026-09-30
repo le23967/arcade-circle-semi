@@ -170,15 +170,9 @@ function SearchTab({ myId, configured, follows, onOpenProfile }) {
       <Body>
         {!signedIn ? (
           <p className="px-6 py-10 text-center text-xs leading-relaxed text-ink-muted">
-            {configured
-              ? 'Sign in to find and follow people.'
-              : 'Accounts are not set up on this build, so there is nobody to find yet.'}
+            {configured ? 'Sign in to add people' : 'Accounts unavailable'}
           </p>
-        ) : trimmed === '' ? (
-          <p className="px-6 py-8 text-center text-xs leading-relaxed text-ink-muted">
-            Type part of a username.
-          </p>
-        ) : (
+        ) : trimmed === '' ? null : (
           <>
             <p role="status" className="border-b border-line bg-sunken px-4 py-2 text-xs text-ink-muted">
               {searchError
@@ -186,8 +180,8 @@ function SearchTab({ myId, configured, follows, onOpenProfile }) {
                 : searching
                   ? 'Searching…'
                   : shown.length === 0
-                    ? `No account matches “${trimmed}”.`
-                    : `${shown.length} ${shown.length === 1 ? 'account' : 'accounts'} matching “${trimmed}”`}
+                    ? `No match for “${trimmed}”`
+                    : `${shown.length} ${shown.length === 1 ? 'match' : 'matches'}`}
             </p>
             {actionError && (
               <p role="alert" className="border-b border-line bg-live-bg px-4 py-2 text-xs font-medium text-live">
@@ -269,12 +263,12 @@ function ScanTab({ myId, signedIn, follows, onOpenProfile, onSearchInstead }) {
     foundRef.current = async (text) => {
       const id = decodeProfileCode(text)
       if (!id) {
-        setProblem('That code is not an Arcade Circle profile.')
+        setProblem('Not an Arcade Circle code')
         setPhase('problem')
         return
       }
       if (id === myId) {
-        setProblem('That is your own code.')
+        setProblem('That’s your code')
         setPhase('problem')
         return
       }
@@ -282,14 +276,14 @@ function ScanTab({ myId, signedIn, follows, onOpenProfile, onSearchInstead }) {
       try {
         const profile = await fetchProfile(id)
         if (!profile) {
-          setProblem('That account no longer exists.')
+          setProblem('Account not found')
           setPhase('problem')
           return
         }
         setFound(profile)
         setPhase('found')
       } catch (e) {
-        setProblem(describeError(e, 'Could not look that person up.'))
+        setProblem(describeError(e, 'Couldn’t look them up'))
         setPhase('problem')
       }
     }
@@ -337,7 +331,7 @@ function ScanTab({ myId, signedIn, follows, onOpenProfile, onSearchInstead }) {
     return (
       <Body>
         <p className="px-6 py-10 text-center text-xs leading-relaxed text-ink-muted">
-          Sign in to scan someone’s code.
+          Sign in to scan
         </p>
       </Body>
     )
@@ -357,15 +351,6 @@ function ScanTab({ myId, signedIn, follows, onOpenProfile, onSearchInstead }) {
               </div>
               <Chip tone={rel.mutual ? 'brand' : 'quiet'}>{rel.label}</Chip>
             </div>
-            <p className="mt-3 text-xs leading-relaxed text-ink-muted">
-              {rel.mutual
-                ? `You follow each other, so you will see when ${found.handle} is at an arcade.`
-                : rel.youFollow
-                  ? `${found.handle} has to follow you back before either of you shows up on the other’s map.`
-                  : rel.followsYou
-                    ? `${found.handle} already follows you. Follow back and you both appear on each other’s map.`
-                    : 'Following shares nothing until they follow you back.'}
-            </p>
             {actionError && (
               <p role="alert" className="mt-2 text-xs font-medium text-live">
                 {actionError}
@@ -423,13 +408,12 @@ function ScanTab({ myId, signedIn, follows, onOpenProfile, onSearchInstead }) {
         )}
 
         <p role="status" className="mt-4 max-w-[260px] text-sm leading-relaxed text-ink">
-          {phase === 'idle' && 'Point your camera at the code on their phone.'}
-          {phase === 'starting' && 'Starting the camera…'}
+          {phase === 'starting' && 'Starting camera…'}
           {scanning && 'Looking for a code…'}
-          {phase === 'resolving' && 'Found one. Looking them up…'}
-          {phase === 'denied' && 'Camera access was refused. Allow it in your browser settings and try again, or search by username.'}
-          {phase === 'unavailable' && 'No camera is available here. Search by username instead.'}
-          {phase === 'error' && 'The camera could not be started - another app may be using it. Try again, or search by username.'}
+          {phase === 'resolving' && 'Looking them up…'}
+          {phase === 'denied' && 'Camera blocked'}
+          {phase === 'unavailable' && 'No camera'}
+          {phase === 'error' && 'Camera unavailable'}
           {phase === 'problem' && problem}
         </p>
       </Body>
@@ -447,7 +431,7 @@ function ScanTab({ myId, signedIn, follows, onOpenProfile, onSearchInstead }) {
           onClick={onSearchInstead}
           className="min-h-[44px] w-full rounded-md text-xs font-semibold text-brand-700 underline decoration-brand-200 underline-offset-2 hover:decoration-brand-600"
         >
-          Search by username instead
+          Search by username
         </button>
         {import.meta.env.DEV && phase !== 'resolving' && phase !== 'starting' && (
           <DevCodeInput onCode={(text) => foundRef.current?.(text)} />
@@ -527,7 +511,7 @@ function MyCodeTab({ me, signedIn }) {
     return (
       <Body>
         <p className="px-6 py-10 text-center text-xs leading-relaxed text-ink-muted">
-          Sign in to get a code of your own.
+          Sign in to get your code
         </p>
       </Body>
     )
@@ -537,9 +521,6 @@ function MyCodeTab({ me, signedIn }) {
     <Body className="flex flex-col items-center justify-center p-6 text-center">
       <QrImage value={encodeProfileCode(me.id)} label={`QR code for ${me.handle}`} />
       <p className="mt-4 font-display text-lg font-semibold text-ink">{me.handle}</p>
-      <p className="mt-1 max-w-[260px] text-sm leading-relaxed text-ink-muted">
-        Ask them to open Add someone, then Scan QR, and hold this up.
-      </p>
     </Body>
   )
 }

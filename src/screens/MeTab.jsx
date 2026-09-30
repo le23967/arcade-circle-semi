@@ -106,9 +106,7 @@ export default function MeTab({
                     Weekly goal
                   </p>
                   <p className="mt-0.5 text-xs text-ink-muted">
-                    {sessionsToGo === 0
-                      ? 'Goal met. Keep the run going.'
-                      : `${sessionsToGo} ${sessionsToGo === 1 ? 'session' : 'sessions'} to go.`}
+                    {sessionsToGo === 0 ? 'Goal met' : `${sessionsToGo} to go`}
                   </p>
                 </div>
                 <p className="font-display text-lg font-bold tabular-nums text-ink">
@@ -193,7 +191,6 @@ export default function MeTab({
               checked={visible}
               onChange={onVisible}
               label={visible ? 'Sharing your arcade' : 'Hidden'}
-              hint={visible ? null : 'You still count in queues, as a guest.'}
             />
 
             {/* Presence was always for people who follow each other, and
@@ -223,11 +220,6 @@ export default function MeTab({
                     All followers
                   </Seg>
                 </div>
-                <p className="mt-2 text-xs text-ink-muted">
-                  {audience === 'followers'
-                    ? 'Includes followers you don’t follow back.'
-                    : 'Only people who follow you back.'}
-                </p>
               </div>
             )}
 
@@ -237,7 +229,7 @@ export default function MeTab({
                   checked={alerts}
                   onChange={onAlerts}
                   label={alerts ? 'Background alerts on' : 'Background alerts off'}
-                  hint={alertsBlocked ? 'Blocked in browser settings' : 'For messages while the app is closed'}
+                  hint={alertsBlocked ? 'Blocked in browser' : null}
                 />
               </div>
             )}
@@ -252,12 +244,6 @@ export default function MeTab({
               />
             </div>
 
-            <div className="mt-2 flex items-center gap-2 rounded-xl bg-sunken px-3 py-2.5">
-              <Shield size={15} className="flex-none text-ink-muted" />
-              <p className="text-xs text-ink-muted">
-                Only the arcade is shared. Reports are anonymous.
-              </p>
-            </div>
           </Disclosure>
 
           {/* The account itself: what it is signed in as, and the two ways
