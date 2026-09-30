@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   PAIR_TURN_MIN,
   SOLO_TURN_MIN,
+  ageShort,
   bestArcadeId,
   estimateWaitMin,
   isEligibleForBest,
@@ -14,6 +15,7 @@ import {
   withParty,
   withoutParty,
   workingCabinetsOf,
+  workingLabel,
 } from './queue.js'
 import { ARCADES } from '../data.js'
 
@@ -104,6 +106,14 @@ test('machine labels say when some are not working', () => {
   assert.equal(machinesLabel(venue('a', { cabinets: 5 })), '5/5 machines')
   assert.equal(machinesLabel(venue('a', { cabinets: 5, workingCabinets: 4 })), '4/5 machines working')
   assert.equal(machinesLabel(venue('a', { cabinets: 1 })), '1/1 machine')
+})
+
+test('chip labels are short and still say what they count', () => {
+  assert.equal(workingLabel(venue('a', { cabinets: 5 })), '5/5 working')
+  assert.equal(workingLabel(venue('a', { cabinets: 2, workingCabinets: 0 })), '0/2 working')
+  assert.equal(ageShort(venue('a', { updatedMinsAgo: 0 })), 'just now')
+  assert.equal(ageShort(venue('a', { updatedMinsAgo: 6 })), '6m ago')
+  assert.equal(ageShort(venue('a', { updatedMinsAgo: 95 })), '2h ago')
 })
 
 test('joining and leaving restore the counts exactly, solo or pair', () => {

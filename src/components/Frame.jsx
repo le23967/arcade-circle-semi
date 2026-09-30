@@ -1,4 +1,4 @@
-import { Users, Bars, User } from './Icons.jsx'
+import { Users, Bars, User, Chevron } from './Icons.jsx'
 
 /* Shell.
 
@@ -94,19 +94,21 @@ export function SessionBanner({ arcadeName, position, total, onOpen }) {
     <button
       type="button"
       onClick={onOpen}
-      className="flex w-full items-center justify-between border-b border-line bg-brand-50 px-4 py-2 text-left transition-colors duration-150 hover:bg-brand-100"
+      className="flex min-h-11 w-full items-center justify-between border-b border-line bg-brand-50 px-4 py-2 text-left transition-colors duration-150 hover:bg-brand-100"
     >
       <span className="flex items-center gap-2 text-xs text-ink">
         <span className="relative flex h-2 w-2">
           <span className="anim-ring absolute inline-flex h-full w-full rounded-full bg-brand-500" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-600" />
         </span>
-        In the queue at <span className="font-semibold">{arcadeName}</span>
+        In queue &middot; <span className="font-semibold">{arcadeName}</span>
         <span className="tabular-nums text-ink-muted">
           #{position}/{total}
         </span>
       </span>
-      <span className="text-xs font-semibold text-brand-600">View</span>
+      <span className="text-brand-600" aria-hidden="true">
+        <Chevron size={16} />
+      </span>
     </button>
   )
 }

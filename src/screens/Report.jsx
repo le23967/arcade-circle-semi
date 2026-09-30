@@ -4,9 +4,8 @@ import {
   PrimaryButton,
   SecondaryButton,
   Stepper,
-  Info,
 } from '../components/ui.jsx'
-import { CheckCircle } from '../components/Icons.jsx'
+import { CheckCircle, Shield } from '../components/Icons.jsx'
 import {
   estimateWaitMin,
   pairsOf,
@@ -33,8 +32,8 @@ import {
    pairs and solo, which is the same line described two ways - and since a solo
    player is a party but not a pair, the numbers looked like they disagreed.
 
-   It is also the optional check after joining by QR or NFC ("Queue count
-   looks wrong?"). Opened on the queue you are in, `you` says whether you
+   It is also the optional check after joining by QR or NFC (Update count
+   on the queue screen). Opened on the queue you are in, `you` says whether you
    joined solo or as a pair: the steppers then count everyone else, and your
    own party is added back on submit, so a correction can never drop you out
    of the count or add you twice. */
@@ -52,16 +51,14 @@ export default function Report({ arcade, you = null, onCancel, onSubmit }) {
   if (done) {
     return (
       <Modal title="Thank you">
-        <div className="flex items-start gap-3">
-          <span className="mt-0.5 text-ink">
+        <div className="flex items-center gap-3">
+          <span className="text-fresh">
             <CheckCircle size={28} />
           </span>
           <div>
             <p className="text-sm font-semibold text-ink">Queue updated</p>
-            <p className="text-xs text-ink-muted">
-              {arcade.short}: {partiesLabel(next.queue)} waiting &middot;{' '}
-              {playersLabel(peopleOf(next))} &middot; {previewText}, timestamped
-              now.
+            <p className="text-xs tabular-nums text-ink-muted">
+              {partiesLabel(next.queue)} &middot; {previewText}
             </p>
           </div>
         </div>
@@ -73,44 +70,29 @@ export default function Report({ arcade, you = null, onCancel, onSubmit }) {
   }
 
   return (
-    <Modal title={`Report queue, ${arcade.short}`}>
+    <Modal title={`Update count, ${arcade.short}`}>
       {you && (
         <p className="text-xs text-ink-muted">
-          Count everyone in the queue except you
-          {you === 'pair' ? ' and your partner' : ''}. You are added back, behind
-          the people you count.
+          Don&rsquo;t count yourself{you === 'pair' ? ' or your partner' : ''}.
         </p>
       )}
-      <Stepper
-        label="Pairs waiting"
-        hint="Two players sharing one queue position"
-        value={pairs}
-        onChange={(v) => setPairs(Math.max(0, v))}
-      />
-      <Stepper
-        label="Solo players waiting"
-        hint="One player in one queue position"
-        value={solo}
-        onChange={(v) => setSolo(Math.max(0, v))}
-      />
+      <Stepper label="Pairs" hint="2 players" value={pairs} onChange={(v) => setPairs(Math.max(0, v))} />
+      <Stepper label="Solo" hint="1 player" value={solo} onChange={(v) => setSolo(Math.max(0, v))} />
 
-      <div className="mt-3 rounded-md border border-line bg-sunken px-3 py-2">
-        <p className="text-xs text-ink-muted">
-          {partiesLabel(next.queue)} waiting &middot; {playersLabel(peopleOf(next))}
-          {you ? ', with you' : ''}
+      <div className="mt-3 flex items-baseline justify-between rounded-xl bg-sunken px-4 py-3">
+        <p
+          className={`font-display text-2xl font-bold tabular-nums ${preview === null ? 'text-live' : 'text-ink'}`}
+        >
+          {preview === null ? 'Unavailable' : `${previewText} wait`}
         </p>
-        <p className="text-lg font-semibold tabular-nums text-ink">
-          {preview === null ? 'No working machines' : `${previewText} estimated wait`}
+        <p className="text-xs tabular-nums text-ink-muted">
+          {partiesLabel(next.queue)} &middot; {playersLabel(peopleOf(next))}
         </p>
       </div>
 
       <p className="mt-3 flex items-center gap-1.5 text-xs text-ink-muted">
-        Submitted anonymously
-        <Info>
-          Nobody has to be asked &ldquo;who&rsquo;s next?&rdquo; and nobody has
-          to answer &middot; which matters for players who would rather not talk
-          to a stranger.
-        </Info>
+        <Shield size={14} />
+        Anonymous
       </p>
 
       <div className="mt-4 space-y-2">

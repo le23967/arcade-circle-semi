@@ -25,8 +25,10 @@ const WEEKLY_GOAL = 4
 
    `me` is the signed-in account's real profile - handle and colour from the
    database - and the two counts are real follow edges. The games, songs and
-   the weekly goal below are still prototype data: the app does not record
-   play yet, so they are labelled as sample rather than shown as yours. */
+   the weekly goal below are still seeded: the app does not record play yet.
+   They used to be labelled "sample data" on screen; Week 9 asked for no
+   prototype language in the interface, so the label went and this note is
+   where that caveat now lives. */
 export default function MeTab({
   me,
   account = null,
@@ -153,13 +155,9 @@ export default function MeTab({
 
           <Disclosure
             title="Your player card"
-            hint={`${ME.games.join(', ')} · sample data`}
+            hint={ME.games.join(', ')}
             icon={<Bars size={17} />}
           >
-            <p className="mb-3 text-xs leading-relaxed text-ink-muted">
-              Friends can use these picks to find a game or song you both enjoy.
-              These are sample picks for now; choosing your own comes later.
-            </p>
             <div className="grid grid-cols-2 gap-2">
               <Preference title="Main games" Icon={Bars} items={ME.games} />
               <Preference title="On repeat" Icon={Play} items={ME.songs} />
@@ -184,9 +182,6 @@ export default function MeTab({
               />
             </div>
 
-            <p className="mt-3 rounded-xl bg-fresh-bg px-3 py-2 text-xs leading-relaxed text-ink-muted">
-              Queue updates help other players choose a better time to visit.
-            </p>
           </Disclosure>
 
           <Disclosure
@@ -198,11 +193,7 @@ export default function MeTab({
               checked={visible}
               onChange={onVisible}
               label={visible ? 'Sharing your arcade' : 'Hidden'}
-              hint={
-                visible
-                  ? 'The people chosen below can see which arcade you are checked in at. You can also join a queue without sharing, one check-in at a time.'
-                  : 'Nobody can see where you are. You still count in queues, as a guest.'
-              }
+              hint={visible ? null : 'You still count in queues, as a guest.'}
             />
 
             {/* Presence was always for people who follow each other, and
@@ -232,10 +223,10 @@ export default function MeTab({
                     All followers
                   </Seg>
                 </div>
-                <p className="mt-2 text-xs leading-relaxed text-ink-muted">
+                <p className="mt-2 text-xs text-ink-muted">
                   {audience === 'followers'
-                    ? 'You chose this: everyone who follows you can see which arcade you are at, including people you have not followed back. Switch to Mutual friends to narrow it again.'
-                    : 'Only people you follow who follow you too can see which arcade you are at. This is the default; All followers is only on if you choose it.'}
+                    ? 'Includes followers you don’t follow back.'
+                    : 'Only people who follow you back.'}
                 </p>
               </div>
             )}
@@ -246,11 +237,7 @@ export default function MeTab({
                   checked={alerts}
                   onChange={onAlerts}
                   label={alerts ? 'Background alerts on' : 'Background alerts off'}
-                  hint={
-                    alertsBlocked
-                      ? 'Blocked in your browser settings. Allow notifications for this site to turn them on.'
-                      : 'A notification when a message arrives while the app is not on screen. The browser asks you first.'
-                  }
+                  hint={alertsBlocked ? 'Blocked in browser settings' : 'For messages while the app is closed'}
                 />
               </div>
             )}
@@ -262,16 +249,13 @@ export default function MeTab({
                 checked={soundOn}
                 onChange={onSound}
                 label={soundOn ? 'Sound on' : 'Sound off'}
-                hint="Short cues when you check in, when you are up, when a message arrives, and when you like a clip."
               />
             </div>
 
-            <div className="mt-2 flex items-start gap-2 rounded-xl bg-sunken px-3 py-2.5">
-              <Shield size={15} className="mt-0.5 flex-none text-ink-muted" />
-              <p className="text-[11px] leading-relaxed text-ink-muted">
-                Only the arcade name is shared - never your exact location, which
-                machine you are on, or a history of where you have been. Queue
-                updates and machine reports do not show your handle.
+            <div className="mt-2 flex items-center gap-2 rounded-xl bg-sunken px-3 py-2.5">
+              <Shield size={15} className="flex-none text-ink-muted" />
+              <p className="text-xs text-ink-muted">
+                Only the arcade is shared. Reports are anonymous.
               </p>
             </div>
           </Disclosure>

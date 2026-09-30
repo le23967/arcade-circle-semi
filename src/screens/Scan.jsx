@@ -1,22 +1,17 @@
-import {
-  Screen,
-  TopBar,
-  Body,
-  PrimaryButton,
-  SecondaryButton,
-  Placeholder,
-  Info,
-} from '../components/ui.jsx'
+import { Screen, TopBar, Body, PrimaryButton, Info, Stat, GameDot } from '../components/ui.jsx'
+import { Qr, Nfc, User, Users } from '../components/Icons.jsx'
 
 /* SCREEN 5 - Scan target.
 
-   The sketch draws the cabinet with a QR sticker and NFC tag on it and the
-   phone reaching towards it. In a mid-fi build the cabinet is a gray block:
-   no photography, no illustration. The "simulate" button stands in for the
-   camera so the flow stays clickable.
+   The sketch draws the machine with a QR sticker and NFC tag on it and the
+   phone reaching towards it. There is no camera or NFC read in this build, so
+   the button at the foot stands in for the read and the flow stays
+   clickable; the screen itself looks like what the real one would be, a
+   viewfinder or a reader prompt, with one line saying where to point.
 
    A successful read joins the queue there and then - there is no count to
-   confirm first - so the screen says that before the person scans. */
+   confirm first - so the button says so, and the two choices made on the
+   last screen ride along as chips rather than as a sentence. */
 export default function Scan({ arcade, method, party = 'solo', onBack, onSuccess }) {
   const qr = method === 'qr'
 
@@ -25,51 +20,57 @@ export default function Scan({ arcade, method, party = 'solo', onBack, onSuccess
       <TopBar
         title={qr ? 'Scan QR' : 'Tap NFC'}
         onBack={onBack}
-        right={
-          <Info >
-            Scanning at the cabinet is what ties you to this venue. No precise
-            location is read or stored &middot; the app only knows which arcade
-            you tapped.
-          </Info>
-        }
+        right={<Info>Only the arcade is recorded, never your location.</Info>}
       />
 
-      <Body className="p-4">
-        <Placeholder className="h-56 w-full" label="Cabinet, placeholder">
-          <div className="flex w-full flex-col items-center gap-2 px-6">
-            <div className="w-full rounded-md border border-line-strong bg-line-strong py-1 text-center text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
-              {arcade.game}
-            </div>
-            <div className="h-20 w-full rounded-md border border-line-strong bg-sunken" />
-            <div className="flex w-full items-center justify-center gap-2">
-              <div className="h-8 w-8 rounded-md border border-line-strong bg-surface" />
-              <div className="h-8 flex-1 rounded-md border border-line-strong bg-line-strong" />
-              <div className="h-8 w-8 rounded-md border border-line-strong bg-surface" />
-            </div>
-            <span className="text-[11px] uppercase tracking-wide text-ink-muted">
-              {qr ? 'QR sticker on the panel' : 'NFC reader on the panel'}
-            </span>
-          </div>
-        </Placeholder>
+      <Body className="flex flex-col items-center px-6 pt-8">
+        {qr ? <Viewfinder /> : <Reader />}
 
-        <p className="mt-4 text-sm text-ink">
-          {qr
-            ? 'Point your camera at the sticker on the cabinet.'
-            : 'Hold the top of your phone against the reader.'}
+        <p className="mt-6 text-center text-base font-semibold text-ink">
+          {qr ? 'Point at the QR on the machine' : 'Hold your phone to the reader'}
         </p>
-        <p className="mt-1 text-xs text-ink-muted">
-          You join the {arcade.game} queue as soon as it reads,{' '}
-          {party === 'pair' ? 'with your partner' : 'as a solo player'}.
-        </p>
-
+        <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+          <Stat pill tone="ink" icon={<GameDot color={arcade.gameColor} />}>
+            {arcade.game}
+          </Stat>
+          <Stat pill tone="ink" icon={party === 'pair' ? <Users size={13} /> : <User size={13} />}>
+            {party === 'pair' ? 'With a partner' : 'Solo'}
+          </Stat>
+        </div>
       </Body>
 
-      <div className="space-y-2 border-t border-line p-4">
+      <div className="border-t border-line p-4">
         <PrimaryButton onClick={onSuccess}>
-          Simulate {qr ? 'scan' : 'tap'} &middot; join queue
+          {qr ? 'Scan' : 'Tap'} &amp; join queue
         </PrimaryButton>
-        <SecondaryButton onClick={onBack}>Cancel</SecondaryButton>
       </div>
     </Screen>
+  )
+}
+
+/* A camera frame: dark ground, four corners, a line that sweeps. The sweep
+   is motion, so reduced-motion stops it with everything else. */
+function Viewfinder() {
+  return (
+    <div className="relative flex aspect-square w-60 items-center justify-center overflow-hidden rounded-3xl bg-ink">
+      {['left-4 top-4 border-l-4 border-t-4 rounded-tl-xl', 'right-4 top-4 border-r-4 border-t-4 rounded-tr-xl', 'bottom-4 left-4 border-b-4 border-l-4 rounded-bl-xl', 'bottom-4 right-4 border-b-4 border-r-4 rounded-br-xl'].map((c) => (
+        <span key={c} className={`absolute h-10 w-10 border-white ${c}`} aria-hidden="true" />
+      ))}
+      <span className="text-white/25" aria-hidden="true">
+        <Qr size={96} />
+      </span>
+      <span className="anim-sweep absolute inset-x-8 h-0.5 rounded-full bg-brand-400 shadow-[0_0_12px_2px_rgba(129,140,248,0.7)]" aria-hidden="true" />
+    </div>
+  )
+}
+
+function Reader() {
+  return (
+    <div className="relative flex h-60 w-60 items-center justify-center" aria-hidden="true">
+      <span className="anim-ring absolute h-32 w-32 rounded-full bg-brand-200" />
+      <span className="relative flex h-32 w-32 items-center justify-center rounded-full bg-brand-600 text-white shadow-xl shadow-brand-600/30">
+        <Nfc size={56} />
+      </span>
+    </div>
   )
 }

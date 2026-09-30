@@ -5,16 +5,11 @@ import {
   Body,
   PrimaryButton,
   Stepper,
-  Info,
+  Stat,
+  GameDot,
 } from '../components/ui.jsx'
-import {
-  estimateWaitMin,
-  freshnessLabel,
-  isStale,
-  pairsOf,
-  partiesLabel,
-  withParty,
-} from '../lib/queue.js'
+import { Refresh } from '../components/Icons.jsx'
+import { ageShort, estimateWaitMin, isStale, pairsOf, withParty } from '../lib/queue.js'
 
 /* Manual check-in: confirm what you can see.
 
@@ -31,7 +26,7 @@ import {
    action, and it asks for a report at a moment when the person is not
    necessarily looking at the queue.
 
-   This is the moment they are. They have just scanned at the cabinet, so they
+   This is the moment they are. They are standing at the machine, so they
    are standing in front of the line and can count it. The steppers arrive
    pre-filled with the last report, so if it is already right this stays a
    single tap, which is the bar check-in has to clear: the arcade's paper queue
@@ -41,7 +36,7 @@ import {
    blind +1 on top of a number nobody has confirmed.
 
    It asks for pairs and solo players because that is what the arcade page
-   shows, and what a person standing at the cabinet can actually count. Asking
+   shows, and what a person standing at the machine can actually count. Asking
    for "parties" here and displaying "pairs" there described the same line two
    different ways - and a solo player is a party but not a pair, so the two
    readings did not even line up. The party total is derived rather than
@@ -54,66 +49,47 @@ export default function ConfirmQueue({ arcade, party = 'solo', onBack, onConfirm
   const withYou = { ...arcade, ...withParty({ queue, solo }, party) }
   const wait = estimateWaitMin(withYou)
   const changed = pairs !== pairsOf(arcade) || solo !== arcade.solo
+  const stale = isStale(arcade)
 
   return (
     <Screen>
-      <TopBar
-        title="Manual check-in"
-        onBack={onBack}
-        right={
-          <Info>
-            You are at the cabinet, so you can see the line. Confirming it here
-            means the next person reads a number somebody actually checked,
-            instead of one that has been drifting since the last report.
-          </Info>
-        }
-      />
+      <TopBar title="Manual check-in" onBack={onBack} />
 
       <Body>
-        <div className="border-b border-line px-4 py-3">
-          <p className="text-sm text-ink">
-            {arcade.name} &middot; {arcade.game}
+        <div className="flex items-center justify-between gap-2 border-b border-line px-4 py-3">
+          <p className="flex min-w-0 items-center gap-2 text-sm font-semibold text-ink">
+            <GameDot color={arcade.gameColor} className="h-2.5 w-2.5" />
+            <span className="truncate">
+              {arcade.short} &middot; {arcade.game}
+            </span>
           </p>
-          <p className="text-xs text-ink-muted">
-            {freshnessLabel(arcade)}
-            {isStale(arcade) && ', worth a second look'}
-          </p>
+          <Stat pill tone={stale ? 'stale' : 'fresh'} label="Last count" icon={<Refresh size={13} />}>
+            {ageShort(arcade)}
+          </Stat>
         </div>
 
+        {/* The question is the one piece of text here that has to be read,
+            because counting yourself in is the easy mistake. */}
         <div className="px-4">
-          <p className="pt-3 text-sm font-semibold text-ink">
-            How many are waiting, not counting you
-            {party === 'pair' ? ' and your partner' : ''}?
+          <p className="pt-4 text-sm font-semibold text-ink">
+            Waiting now, not counting you{party === 'pair' ? ' or your partner' : ''}
           </p>
-          <Stepper
-            label="Pairs waiting"
-            hint="Two players sharing one queue position"
-            value={pairs}
-            onChange={(v) => setPairs(Math.max(0, v))}
-          />
-          <Stepper
-            label="Solo players waiting"
-            hint="One player in one queue position"
-            value={solo}
-            onChange={(v) => setSolo(Math.max(0, v))}
-          />
+          <Stepper label="Pairs" hint="2 players" value={pairs} onChange={(v) => setPairs(Math.max(0, v))} />
+          <Stepper label="Solo" hint="1 player" value={solo} onChange={(v) => setSolo(Math.max(0, v))} />
         </div>
 
-        <div className="mx-4 mt-3 rounded-md border border-line bg-sunken px-3 py-2">
-          <p className="text-xs text-ink-muted">
-            That is {partiesLabel(queue)} waiting
+        <div className="mx-4 mt-3 flex items-baseline justify-between rounded-xl bg-sunken px-4 py-3">
+          <p className="font-display text-2xl font-bold tabular-nums text-ink">
+            You&rsquo;d be #{queue + 1}
           </p>
-          <p className="text-lg font-semibold tabular-nums text-ink">
-            You&rsquo;d be #{queue + 1} &middot;{' '}
-            {wait === null ? 'no working machines' : `~${wait} min`}
+          <p className={`text-sm font-semibold tabular-nums ${wait === null ? 'text-live' : 'text-ink-muted'}`}>
+            {wait === null ? 'No working machines' : `~${wait} min`}
           </p>
         </div>
 
-        <p className="px-4 py-3 text-xs text-ink-muted">
-          {changed
-            ? 'Your correction replaces the current count for everyone.'
-            : 'Leave it as is if the count looks right.'}
-        </p>
+        {changed && (
+          <p className="px-4 pt-3 text-xs text-ink-muted">Updates the count for everyone.</p>
+        )}
       </Body>
 
       <div className="border-t border-line p-4">

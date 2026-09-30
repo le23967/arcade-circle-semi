@@ -11,7 +11,7 @@ import { CheckCircle, Users } from '../components/Icons.jsx'
    They are now two different things at two different moments. This sheet is
    the first one: it names the person and the venue before it commits, and then
    says plainly that they were told. Join queue stays on the arcade page, for
-   when you are standing at the cabinet. */
+   when you are standing at the machine. */
 export default function JoinFriend({
   handle,
   arcade,
@@ -45,22 +45,19 @@ export default function JoinFriend({
               </span>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-ink">
-                  {real ? `${handle} has been told` : `${handle} is a sample player`}
+                  {real ? `${handle} knows you’re coming` : `On your way to ${venueShort}`}
                 </p>
-                <p className="mt-0.5 text-xs text-ink-muted">
-                  {real
-                    ? `They have a message from you: on your way to ${venue}.`
-                    : `Nothing was sent - there is nobody behind this profile. You're on your way to ${venue}.`}
-                </p>
+                {real && (
+                  <p className="mt-0.5 text-xs text-ink-muted">Message sent</p>
+                )}
               </div>
             </div>
 
             {/* The distinction the evaluation asked for, said out loud rather
                 than left to be inferred from which screen you are on. */}
-            <p className="mt-3 rounded-xl border border-line bg-sunken px-3 py-2.5 text-xs leading-relaxed text-ink-muted">
-              You are <span className="font-semibold text-ink">not</span> in the
-              queue yet. Join the queue at the cabinet when you get to{' '}
-              {venueShort}.
+            <p className="mt-3 rounded-xl border border-line bg-sunken px-3 py-2.5 text-xs text-ink-muted">
+              <span className="font-semibold text-ink">Not in the queue yet.</span>{' '}
+              Check in at the machine when you arrive.
             </p>
 
             <div className="mt-4 space-y-2">
@@ -76,7 +73,7 @@ export default function JoinFriend({
                 onClick={onUndo}
                 className="w-full rounded-lg py-1.5 text-xs font-semibold text-ink-muted transition-colors duration-150 hover:text-ink"
               >
-                Take it back &mdash; I&rsquo;m not coming
+                Undo &mdash; not coming
               </button>
             </div>
           </div>
@@ -92,17 +89,11 @@ export default function JoinFriend({
               </div>
             </div>
 
-            <p className="mt-3 flex items-start gap-2 rounded-xl bg-sunken px-3 py-2.5 text-xs leading-relaxed text-ink-muted">
-              <span className="mt-0.5 flex-none text-ink-subtle">
+            <p className="mt-3 flex items-center gap-2 rounded-xl bg-sunken px-3 py-2.5 text-xs text-ink-muted">
+              <span className="flex-none text-ink-subtle">
                 <Users size={15} />
               </span>
-              <span>
-                {real
-                  ? `${handle} gets a message saying you are coming. `
-                  : `${handle} is a sample player, so nothing is sent. `}
-                You join the queue yourself once you arrive, so this does not
-                take a queue position.
-              </span>
+              {real ? `Tells ${handle} you’re coming. ` : ''}No queue spot is taken.
             </p>
 
             <div aria-live="polite">

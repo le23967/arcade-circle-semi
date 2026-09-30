@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Modal, PrimaryButton, SecondaryButton, Info } from '../components/ui.jsx'
-import { CheckCircle } from '../components/Icons.jsx'
+import { Modal, PrimaryButton, SecondaryButton } from '../components/ui.jsx'
+import { CheckCircle, Shield } from '../components/Icons.jsx'
 import { estimateWaitMin, workingCabinetsOf } from '../lib/queue.js'
 import {
   ISSUE_TYPES,
@@ -17,7 +17,7 @@ import {
    the machines are in. Participants asked for exactly this - "like a form
    ... player can report the status of the machine ... so be careful" - and
    for a short status and a comment rather than a score, so it is a type,
-   an optional cabinet and an optional line of text.
+   an optional machine and an optional line of text.
 
    Problems already reported are listed first, each with a way to say it is
    working again, because a stale "broken" warning sends people away from a
@@ -45,21 +45,19 @@ export default function MachineReport({ arcade, onCancel, onReport, onWorking })
   function summary() {
     const working = workingCabinetsOf(arcade)
     const wait = estimateWaitMin(arcade)
-    return `${arcade.short} now shows ${working} of ${arcade.cabinets} working${
-      wait === null ? ', so it is unavailable for now.' : `, about ${wait} min wait.`
-    }`
+    return `Now ${working}/${arcade.cabinets} working · ${wait === null ? 'unavailable' : `~${wait} min`}`
   }
 
   if (done) {
     return (
       <Modal title="Thank you">
-        <div className="flex items-start gap-3">
-          <span className="mt-0.5 text-ink">
+        <div className="flex items-center gap-3">
+          <span className="text-fresh">
             <CheckCircle size={28} />
           </span>
           <div>
             <p className="text-sm font-semibold text-ink">{done}</p>
-            <p className="text-xs text-ink-muted">{summary()}</p>
+            <p className="text-xs tabular-nums text-ink-muted">{summary()}</p>
           </div>
         </div>
         <div className="mt-4">
@@ -70,15 +68,15 @@ export default function MachineReport({ arcade, onCancel, onReport, onWorking })
   }
 
   return (
-    <Modal title={`Machine condition, ${arcade.short}`}>
-      <p className="text-xs text-ink-muted">
-        {arcade.game} &middot; {workingCabinetsOf(arcade)} of {arcade.cabinets} working
+    <Modal title={`Machines, ${arcade.short}`}>
+      <p className="text-xs tabular-nums text-ink-muted">
+        {arcade.game} &middot; {workingCabinetsOf(arcade)}/{arcade.cabinets} working
       </p>
 
       {problems.length > 0 && (
         <section className="mt-3" aria-labelledby="reported-heading">
           <h3 id="reported-heading" className="text-xs uppercase tracking-wide text-ink-muted">
-            Reported problems
+            Reported
           </h3>
           <ul className="mt-1">
             {problems.map((issue) => (
@@ -94,7 +92,7 @@ export default function MachineReport({ arcade, onCancel, onReport, onWorking })
                   type="button"
                   onClick={() => {
                     onWorking(issue.id)
-                    setDone(`${issue.cabinet ?? 'Machine'} marked as working normally`)
+                    setDone(`${issue.cabinet ?? 'Machine'} marked working`)
                   }}
                   className="min-h-11 flex-none rounded-xl border border-line-strong px-3 text-xs font-semibold text-ink transition-colors duration-150 hover:bg-sunken"
                 >
@@ -108,7 +106,7 @@ export default function MachineReport({ arcade, onCancel, onReport, onWorking })
 
       <section className="mt-3" aria-labelledby="new-issue-heading">
         <h3 id="new-issue-heading" className="text-xs uppercase tracking-wide text-ink-muted">
-          Report a problem
+          What&rsquo;s wrong?
         </h3>
         <div className="mt-1.5 grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="What is wrong">
           {ISSUE_TYPES.map((t) => (
@@ -123,7 +121,7 @@ export default function MachineReport({ arcade, onCancel, onReport, onWorking })
             <p className="mt-3 text-xs font-medium text-ink">
               Which machine?{' '}
               <span className="font-normal text-ink-muted">
-                {type === 'out' ? 'Needed for out of order' : 'Optional'}
+                {type === 'out' ? 'Required' : 'Optional'}
               </span>
             </p>
             <div className="mt-1.5 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Which machine">
@@ -140,7 +138,7 @@ export default function MachineReport({ arcade, onCancel, onReport, onWorking })
         )}
 
         <label className="mt-3 block text-xs font-medium text-ink" htmlFor="machine-note">
-          Short note <span className="font-normal text-ink-muted">Optional</span>
+          Note <span className="font-normal text-ink-muted">Optional</span>
         </label>
         <input
           id="machine-note"
@@ -148,17 +146,14 @@ export default function MachineReport({ arcade, onCancel, onReport, onWorking })
           value={note}
           maxLength={NOTE_MAX}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="e.g. sticky button, left speaker out"
+          placeholder="e.g. sticky button"
           className="mt-1 min-h-11 w-full rounded-xl border border-line-strong bg-surface px-3 text-sm text-ink outline-none placeholder:text-ink-subtle focus:border-brand-500"
         />
       </section>
 
       <p className="mt-3 flex items-center gap-1.5 text-xs text-ink-muted">
-        Submitted anonymously
-        <Info above>
-          Your name is not attached, and the report is not linked to your
-          check-in, so it does not show which machine you are playing on.
-        </Info>
+        <Shield size={14} />
+        Anonymous
       </p>
 
       <div className="mt-3 space-y-2">
@@ -169,7 +164,7 @@ export default function MachineReport({ arcade, onCancel, onReport, onWorking })
             setDone(`${noteTitle({ type, cabinet: multi ? cabinet : null })} reported`)
           }}
         >
-          {needsCabinet ? 'Pick which machine' : 'Submit report'}
+          {needsCabinet ? 'Pick a machine' : 'Submit'}
         </PrimaryButton>
         <SecondaryButton onClick={onCancel}>Cancel</SecondaryButton>
       </div>

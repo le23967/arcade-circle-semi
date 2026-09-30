@@ -214,10 +214,8 @@ export default function PlayerProfile({
           <p className="flex items-center gap-1.5 px-4 py-3 text-xs text-ink-subtle">
             Contact is mutual-only
             <Info above>
-              Messaging only reaches people you follow both ways. Nothing here
-              lets you approach a stranger, which is what the arcade research
-              warned against. The one exception is someone whose open session
-              you have joined - they asked for anyone, so you can reply.
+              Only people who follow each other can message, plus hosts of
+              open sessions you have joined.
             </Info>
           </p>
         )}

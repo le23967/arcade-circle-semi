@@ -141,7 +141,7 @@ export const ARCADES = [
         6,
         '12:34 PM',
         [{ handle: 'ovo_' }, { handle: 'polar', plus: 1 }, { handle: 'tsuki' }],
-        [{ id: 'seed-koko-maimai-3', type: 'controls', cabinet: 'Cab 3', note: 'Sticky B button', minsAgo: 25 }]
+        [{ id: 'seed-koko-maimai-3', type: 'controls', cabinet: 'Machine 3', note: 'Sticky B button', minsAgo: 25 }]
       ),
       chunithm: q(3, 5, 3, 4, '12:36 PM', [{ handle: 'ovo_' }, { handle: 'hana' }]),
       sdvx: q(2, 4, 2, 26, '12:14 PM'),

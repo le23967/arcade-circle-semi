@@ -1,7 +1,9 @@
-import { Screen, TopBar, Body, PrimaryButton, Info } from '../components/ui.jsx'
+import { Screen, TopBar, Body, PrimaryButton } from '../components/ui.jsx'
 import { CheckCircle } from '../components/Icons.jsx'
 
-/* SCREEN 8 - Session summary. */
+/* SCREEN 8 - Session summary. Checked out says the machine is free; the
+   note that used to explain why checking out promptly matters went with
+   the Week 9 cut, since it is read after the fact it argues for. */
 export default function Summary({ arcade, sessionMin, waitedMin, onDone }) {
   return (
     <Screen>
@@ -9,7 +11,7 @@ export default function Summary({ arcade, sessionMin, waitedMin, onDone }) {
 
       <Body>
         <div className="flex items-center gap-3 border-b border-line px-4 py-6">
-          <span className="text-ink">
+          <span className="text-fresh">
             <CheckCircle size={40} />
           </span>
           <div>
@@ -24,14 +26,6 @@ export default function Summary({ arcade, sessionMin, waitedMin, onDone }) {
           <Line label="Arcade" value={arcade.short} />
         </dl>
 
-        <p className="flex items-center gap-1.5 px-4 py-4 text-xs text-ink-muted">
-          Your slot has been freed
-          <Info above>
-            Checking out immediately is what keeps the running order honest for
-            everyone still waiting. Session times also feed this venue&rsquo;s
-            wait estimate.
-          </Info>
-        </p>
       </Body>
 
       <div className="border-t border-line p-4">
