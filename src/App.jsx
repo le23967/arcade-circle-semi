@@ -261,16 +261,6 @@ function Prototype({ auth, initialGame }) {
     () => (myId ? presence.present : presentFriends(followingHandles)),
     [myId, presence.present, followingHandles]
   )
-  /* Why the map may be empty, said once, where the emptiness is. */
-  const mutualCount = useMemo(() => {
-    const followerIds = new Set(follows.followers.map((p) => p.id))
-    return follows.following.filter((p) => followerIds.has(p.id)).length
-  }, [follows.following, follows.followers])
-  const presenceHint = !myId
-    ? null
-    : mutualCount === 0
-      ? 'Follow someone who follows you back to see them here.'
-      : null
   /* Whether to raise a system notification for a message that arrives
      while the app is in the background. Off until the person turns it on,
      which is when the browser asks them. */
@@ -980,7 +970,6 @@ function Prototype({ auth, initialGame }) {
               me={me}
               following={followingHandles}
               present={present}
-              presenceHint={presenceHint}
               joinsSent={joinsSent}
               planned={planned}
               rsvps={rsvps}
@@ -1022,7 +1011,7 @@ function Prototype({ auth, initialGame }) {
               handle={chat.handle}
               messages={[]}
               mode="closed"
-              closedNote={`${chat.handle} can’t receive messages.`}
+              closedNote="Messaging unavailable"
               onOpenProfile={() => openPlayer(chat.handle)}
               onBack={leaveToTab}
               backLabel={`Back to ${tabLabel(backTab)}`}
@@ -1402,7 +1391,6 @@ function Prototype({ auth, initialGame }) {
         {modal === 'checkout' && sessionArcade && (
           <QueueExitSheet
             title={`Finished at ${sessionArcade.short}?`}
-            detail="Frees your machine and saves the session."
             confirmLabel="Check out"
             onCancel={() => setModal(null)}
             onConfirm={doCheckOut}
@@ -1412,7 +1400,6 @@ function Prototype({ auth, initialGame }) {
         {modal === 'leavequeue' && sessionArcade && session && (
           <QueueExitSheet
             title={`Leave the queue at ${sessionArcade.short}?`}
-            detail={`You give up #${session.position}.`}
             confirmLabel="Leave queue"
             onCancel={() => setModal(null)}
             onConfirm={leaveQueue}
@@ -1474,7 +1461,7 @@ function RealThread({
       messages={thread.messages}
       mode={thread.mode}
       subtitle={subtitle}
-      closedNote={thread.mode === 'closed' ? 'You can’t message this person.' : ''}
+      closedNote={thread.mode === 'closed' ? 'Messaging unavailable' : ''}
       loading={thread.loading}
       error={thread.error}
       sending={thread.sending}
@@ -1577,7 +1564,7 @@ function QueueExitSheet({ title, detail, confirmLabel, onCancel, onConfirm }) {
         <h2 className="font-display text-base font-semibold text-ink">
           {title}
         </h2>
-        <p className="mt-1 text-xs leading-relaxed text-ink-muted">{detail}</p>
+        {detail && <p className="mt-1 text-xs text-ink-muted">{detail}</p>}
         <div className="mt-4 space-y-2">
           <PrimaryButton onClick={onConfirm}>{confirmLabel}</PrimaryButton>
           <SecondaryButton onClick={onCancel}>Cancel</SecondaryButton>

@@ -192,7 +192,7 @@ export default function CheckedIn({
                 <Play size={16} />
               </span>
               <span className="min-w-0 flex-1 text-sm font-medium text-ink">
-                Watch clips while you wait
+                Watch clips
               </span>
               <Chevron size={16} />
             </button>

@@ -46,10 +46,7 @@ export default function Follows({
         title="People"
         onBack={onBack}
         right={
-          <Info>
-            You only share your arcade with people you follow back. Following
-            someone who does not follow you back shows you nothing until they do.
-          </Info>
+          <Info>Only people who follow each other see each other&rsquo;s arcade.</Info>
         }
       />
 
@@ -61,21 +58,14 @@ export default function Follows({
         <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-brand-50 text-brand-700">
           <Plus size={18} />
         </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold text-ink">Add someone</span>
-          <span className="block text-xs text-ink-muted">
-            Search by username, or scan a code
-          </span>
-        </span>
+        <span className="min-w-0 flex-1 text-sm font-semibold text-ink">Add someone</span>
         <Chevron size={16} className="text-ink-subtle" />
       </button>
 
       {!signedIn ? (
         <Body>
           <p className="px-6 py-10 text-center text-xs leading-relaxed text-ink-muted">
-            {configured
-              ? 'Sign in to see who you follow.'
-              : 'Accounts are not set up on this build, so there is nobody to see yet.'}
+            {configured ? 'Sign in to see people' : 'Accounts unavailable'}
           </p>
         </Body>
       ) : (
@@ -110,9 +100,7 @@ export default function Follows({
               </p>
             ) : rows.length === 0 ? (
               <p className="px-6 py-10 text-center text-xs leading-relaxed text-ink-muted">
-                {tabName === 'followers'
-                  ? 'Nobody follows you yet. Share your username, or show your code under Add someone.'
-                  : 'You are not following anyone yet. Find people under Add someone.'}
+                {tabName === 'followers' ? 'No followers yet' : 'Not following anyone yet'}
               </p>
             ) : (
               <ul>

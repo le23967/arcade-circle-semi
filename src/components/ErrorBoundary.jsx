@@ -30,9 +30,6 @@ export default class ErrorBoundary extends Component {
         <p className="text-base font-semibold text-ink">
           This screen didn&rsquo;t load
         </p>
-        <p className="mt-1 text-xs text-ink-muted">
-          Pick another tab to carry on.
-        </p>
         <pre className="mt-4 max-h-32 w-full overflow-auto rounded-md border border-line bg-sunken p-2 text-left text-[11px] leading-relaxed text-ink-muted">
           {String(this.state.error?.message ?? this.state.error)}
         </pre>

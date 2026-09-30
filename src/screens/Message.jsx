@@ -150,11 +150,7 @@ export default function Message({
           </p>
         ) : messages.length === 0 ? (
           mode === 'closed' ? null : (
-            <p className="py-6 text-center text-xs text-ink-subtle">
-              {mode === 'request-compose'
-                ? `Your first message reaches ${handle} as a request.`
-                : 'No messages yet'}
-            </p>
+            <p className="py-6 text-center text-xs text-ink-subtle">No messages yet</p>
           )
         ) : (
           <ul className="space-y-2">
@@ -247,7 +243,7 @@ export default function Message({
           role="status"
           className="border-t border-line bg-surface px-4 py-4 text-center text-xs leading-relaxed text-ink-muted"
         >
-          Request sent. You can keep talking once {handle} accepts.
+          Request sent
         </p>
       )}
 
@@ -256,10 +252,7 @@ export default function Message({
            one that opens something, so it is the primary; Block is the one
            that closes something, so it is quiet and asks first. */
         <div className="border-t border-line bg-surface px-4 pb-3 pt-3">
-          <p className="text-xs leading-relaxed text-ink-muted">
-            {handle} wants to message you. You don’t follow each other. Accept to
-            reply, or decline and they won’t know.
-          </p>
+          <p className="text-xs font-semibold text-ink">Message request</p>
           {answerError && (
             <p role="alert" className="mt-2 text-xs font-medium text-live">
               {answerError}
@@ -283,13 +276,13 @@ export default function Message({
 
       {mode === 'blocked' && (
         <p className="border-t border-line bg-surface px-4 py-4 text-center text-xs leading-relaxed text-ink-muted">
-          You blocked {handle}. Unblock them from their profile to message again.
+          Blocked
         </p>
       )}
 
       {mode === 'closed' && (
         <p className="border-t border-line bg-surface px-4 py-4 text-center text-xs leading-relaxed text-ink-muted">
-          {closedNote || `You can’t message ${handle}.`}
+          {closedNote || 'Messaging unavailable'}
         </p>
       )}
     </Screen>

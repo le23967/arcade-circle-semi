@@ -73,7 +73,7 @@ export default function Messages({
       <SheetBody>
         <div role="tabpanel" aria-labelledby={`messages-tab-${tab}`} id={`messages-panel-${tab}`}>
           {!signedIn ? (
-            <Empty title="Sign in to message" detail="Messages are between accounts." />
+            <Empty title="Sign in to message" />
           ) : error ? (
             <p role="alert" className="px-6 py-10 text-center text-xs font-medium text-live">
               {error}
@@ -84,15 +84,9 @@ export default function Messages({
             </p>
           ) : rows.length === 0 ? (
             tab === 'requests' ? (
-              <Empty
-                title="No requests"
-                detail="When someone you don’t follow both ways messages you, it arrives here for you to accept or decline."
-              />
+              <Empty title="No requests" />
             ) : (
-              <Empty
-                title="No conversations yet"
-                detail="Open someone’s profile and tap Message. What you send stays here."
-              />
+              <Empty title="No conversations yet" />
             )
           ) : (
             <ul>
@@ -127,11 +121,10 @@ function ListTab({ on, onClick, id, children }) {
   )
 }
 
-function Empty({ title, detail }) {
+function Empty({ title }) {
   return (
     <div className="px-6 py-10 text-center">
       <p className="font-display text-sm font-semibold text-ink">{title}</p>
-      <p className="mt-1 text-xs leading-relaxed text-ink-muted">{detail}</p>
     </div>
   )
 }

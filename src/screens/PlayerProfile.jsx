@@ -4,7 +4,6 @@ import {
   Body,
   Avatar,
   Chip,
-  Info,
   PrimaryButton,
   SecondaryButton,
   QuietAction,
@@ -144,7 +143,7 @@ export default function PlayerProfile({
                 At {arcade.name}
               </span>
               <span className="block text-xs tabular-nums text-ink-muted">
-                Checked in {player.sinceMin ?? sinceMin ?? 0} min ago
+                {player.sinceMin ?? sinceMin ?? 0}m
               </span>
             </span>
             <span className="text-xs font-semibold text-fresh">Open</span>
@@ -153,30 +152,21 @@ export default function PlayerProfile({
 
         <Section title="In common">
           {games.length === 0 && songs.length === 0 ? (
-            <p className="text-sm text-ink-muted">Nothing on record yet.</p>
+            <p className="text-sm text-ink-muted">&mdash;</p>
           ) : (
-            <div className="space-y-1.5">
-              {games.length > 0 && (
-                <p className="text-sm text-ink">
-                  You both play{' '}
-                  <span className="font-semibold">{games.join(' and ')}</span>.
-                </p>
-              )}
-              {songs.length > 0 && (
-                <p className="text-sm text-ink">
-                  <span className="font-semibold">{songs.join(', ')}</span>{' '}
-                  {songs.length === 1 ? 'is' : 'are'} in both your favourites.
-                </p>
-              )}
+            <div className="flex flex-wrap gap-1.5">
+              {[...games, ...songs].map((item) => (
+                <Chip key={item} tone="brand">
+                  {item}
+                </Chip>
+              ))}
             </div>
           )}
         </Section>
 
         <Section title="Favourite songs">
           {playerSongs.length === 0 ? (
-            <p className="text-sm text-ink-muted">
-              {player.handle} has not shared any favourites yet.
-            </p>
+            <p className="text-sm text-ink-muted">&mdash;</p>
           ) : (
             <div className="flex flex-wrap gap-1.5">
               {playerSongs.map((s) => (
@@ -210,15 +200,6 @@ export default function PlayerProfile({
           </Section>
         )}
 
-        {!player.real && (
-          <p className="flex items-center gap-1.5 px-4 py-3 text-xs text-ink-subtle">
-            Contact is mutual-only
-            <Info above>
-              Only people who follow each other can message, plus hosts of
-              open sessions you have joined.
-            </Info>
-          </p>
-        )}
       </Body>
 
       {/* The actions the consultation asked for: reach out, join them where
@@ -246,15 +227,14 @@ export default function PlayerProfile({
             {joined && (
               <div className="flex items-center gap-2 rounded-xl bg-fresh-bg px-3 py-2">
                 <p className="min-w-0 flex-1 text-xs font-medium text-ink">
-                  {player.handle} knows you&rsquo;re on your way to{' '}
-                  {arcade.short}.
+                  {player.handle} knows you&rsquo;re coming
                 </p>
                 <button
                   type="button"
                   onClick={() => onUnsendJoin?.(player.handle)}
-                  className="flex-none rounded-md text-xs font-semibold text-ink-muted underline decoration-ink-subtle underline-offset-2 transition-colors duration-150 hover:text-ink"
+                  className="min-h-11 flex-none rounded-md text-xs font-semibold text-ink-muted underline decoration-ink-subtle underline-offset-2 transition-colors duration-150 hover:text-ink"
                 >
-                  Take it back
+                  Undo
                 </button>
               </div>
             )}
@@ -276,8 +256,7 @@ export default function PlayerProfile({
             {openSession && (
               <div className="flex items-center gap-2 rounded-xl bg-fresh-bg px-3 py-2">
                 <p className="min-w-0 flex-1 text-xs font-medium text-ink">
-                  You&rsquo;re in {player.handle}&rsquo;s open session at{' '}
-                  {openSession}
+                  Going &middot; {openSession}
                 </p>
               </div>
             )}
@@ -286,13 +265,6 @@ export default function PlayerProfile({
                 Message about the session
               </SecondaryButton>
             )}
-            <p className="text-xs leading-relaxed text-ink-muted">
-              {rel.youFollow
-                ? `${player.handle} has not followed you back, so you cannot message them or see where they are.`
-                : rel.followsYou
-                  ? `Follow ${player.handle} back to message them and see where they play.`
-                  : `Follow ${player.handle}, and if they follow back you can message them and see where they play.`}
-            </p>
             {rel.youFollow ? (
               <SecondaryButton onClick={() => onToggleFollow(player.handle)}>
                 Following
@@ -310,9 +282,9 @@ export default function PlayerProfile({
 }
 
 /* The actions for a real account. Message is always first: it is what a
-   profile is for. Under it, the follow, and one line that says what a
-   message will be - a conversation, or a request - so nobody has to learn
-   the rule by sending one. */
+   profile is for. Under it, the follow. The line that explained whether a
+   message would arrive as a request went in the Week 9 cut; the composer
+   itself now says "Write a request…" when it is one. */
 function RealActions({
   player,
   rel,
@@ -330,9 +302,8 @@ function RealActions({
   if (blocked) {
     return (
       <>
-        <p className="rounded-xl bg-sunken px-3 py-2.5 text-xs leading-relaxed text-ink-muted">
-          You blocked {player.handle}. They can’t message you or send you requests,
-          and neither of you follows the other.
+        <p className="rounded-xl bg-sunken px-3 py-2.5 text-xs font-medium text-ink-muted">
+          Blocked
         </p>
         <SecondaryButton onClick={onUnblock} disabled={busy}>
           {busy ? 'Working…' : `Unblock ${player.handle}`}
@@ -349,14 +320,14 @@ function RealActions({
       {there && joined && (
         <div className="flex items-center gap-2 rounded-xl bg-fresh-bg px-3 py-2">
           <p className="min-w-0 flex-1 text-xs font-medium text-ink">
-            {player.handle} knows you&rsquo;re on your way to {arcade.short}.
+            {player.handle} knows you&rsquo;re coming
           </p>
           <button
             type="button"
             onClick={() => onUnsendJoin?.(player.handle)}
-            className="flex-none rounded-md text-xs font-semibold text-ink-muted underline decoration-ink-subtle underline-offset-2 transition-colors duration-150 hover:text-ink"
+            className="min-h-11 flex-none rounded-md text-xs font-semibold text-ink-muted underline decoration-ink-subtle underline-offset-2 transition-colors duration-150 hover:text-ink"
           >
-            Take it back
+            Undo
           </button>
         </div>
       )}
@@ -377,11 +348,6 @@ function RealActions({
       <SecondaryButton onClick={() => onToggleFollow(player.handle)} disabled={busy}>
         {rel.youFollow ? 'Following' : rel.followsYou ? 'Follow back' : 'Follow'}
       </SecondaryButton>
-      <p className="text-xs leading-relaxed text-ink-muted">
-        {rel.mutual
-          ? 'You follow each other, so messages go straight through and you see where each other plays.'
-          : `You don’t follow each other yet, so your first message reaches ${player.handle} as a request.`}
-      </p>
       <div className="flex justify-center pt-1">
         <QuietAction onClick={onBlock} disabled={busy} className="min-h-[44px] px-3">
           Block {player.handle}

@@ -1,5 +1,5 @@
 import { Screen, Body, PrimaryButton, Seg } from '../components/ui.jsx'
-import { Users } from '../components/Icons.jsx'
+import { Users, Clock, Calendar } from '../components/Icons.jsx'
 import { GAMES } from '../data.js'
 
 /* First use.
@@ -12,9 +12,9 @@ import { GAMES } from '../data.js'
    the same place on a reload.
 
    Week 9 asked for less of everything, so the line promising the choice can
-   be changed later went: the game picker on Arcades says that by being
-   there. What is left is the name, the three jobs in one sentence, the
-   choice and the button. */
+   be changed later went, and the one sentence about the app became three
+   icons with two words each: who is out, compare queues, plan sessions. What
+   is left is the name, the three jobs, the choice and the button. */
 export default function Welcome({ game, onGame, onContinue }) {
   return (
     <Screen>
@@ -28,14 +28,26 @@ export default function Welcome({ game, onGame, onContinue }) {
         <h1 className="mt-5 font-display text-3xl font-bold tracking-tight text-ink">
           Arcade Circle
         </h1>
-        <p className="mt-2 text-base leading-relaxed text-ink-muted">
-          See who&rsquo;s at nearby rhythm-game arcades, compare queues, and plan a
-          session.
-        </p>
+        {/* The three jobs, as icons and two words each rather than a
+            sentence to read. */}
+        <ul className="mt-4 space-y-2.5">
+          {[
+            [Users, 'See who’s out'],
+            [Clock, 'Compare queues'],
+            [Calendar, 'Plan sessions'],
+          ].map(([Icon, label]) => (
+            <li key={label} className="flex items-center gap-3 text-base font-medium text-ink">
+              <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+                <Icon size={18} />
+              </span>
+              {label}
+            </li>
+          ))}
+        </ul>
 
         <p
           id="welcome-game"
-          className="mt-10 text-xs font-semibold uppercase tracking-wide text-ink-muted"
+          className="mt-8 text-xs font-semibold uppercase tracking-wide text-ink-muted"
         >
           Your game
         </p>

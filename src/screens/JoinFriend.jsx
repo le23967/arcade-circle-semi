@@ -1,5 +1,5 @@
 import { Avatar, PrimaryButton, SecondaryButton } from '../components/ui.jsx'
-import { CheckCircle, Users } from '../components/Icons.jsx'
+import { CheckCircle } from '../components/Icons.jsx'
 
 /* Telling someone you are on your way.
 
@@ -55,9 +55,8 @@ export default function JoinFriend({
 
             {/* The distinction the evaluation asked for, said out loud rather
                 than left to be inferred from which screen you are on. */}
-            <p className="mt-3 rounded-xl border border-line bg-sunken px-3 py-2.5 text-xs text-ink-muted">
-              <span className="font-semibold text-ink">Not in the queue yet.</span>{' '}
-              Check in at the machine when you arrive.
+            <p className="mt-3 rounded-xl border border-line bg-sunken px-3 py-2.5 text-xs font-semibold text-ink">
+              Not in the queue yet
             </p>
 
             <div className="mt-4 space-y-2">
@@ -89,12 +88,6 @@ export default function JoinFriend({
               </div>
             </div>
 
-            <p className="mt-3 flex items-center gap-2 rounded-xl bg-sunken px-3 py-2.5 text-xs text-ink-muted">
-              <span className="flex-none text-ink-subtle">
-                <Users size={15} />
-              </span>
-              {real ? `Tells ${handle} you’re coming. ` : ''}No queue spot is taken.
-            </p>
 
             <div aria-live="polite">
               {error && (

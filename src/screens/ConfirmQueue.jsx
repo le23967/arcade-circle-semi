@@ -48,7 +48,6 @@ export default function ConfirmQueue({ arcade, party = 'solo', onBack, onConfirm
   const queue = pairs + solo
   const withYou = { ...arcade, ...withParty({ queue, solo }, party) }
   const wait = estimateWaitMin(withYou)
-  const changed = pairs !== pairsOf(arcade) || solo !== arcade.solo
   const stale = isStale(arcade)
 
   return (
@@ -87,9 +86,6 @@ export default function ConfirmQueue({ arcade, party = 'solo', onBack, onConfirm
           </p>
         </div>
 
-        {changed && (
-          <p className="px-4 pt-3 text-xs text-ink-muted">Updates the count for everyone.</p>
-        )}
       </Body>
 
       <div className="border-t border-line p-4">
