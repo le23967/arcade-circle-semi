@@ -219,3 +219,19 @@ export const Cabinet = (p) => (
     <path d="M13.5 15h2" />
   </Svg>
 )
+
+export const Calendar = (p) => (
+  <Svg {...p}>
+    <rect x="4" y="5" width="16" height="15" rx="2" />
+    <path d="M4 10h16M9 3v4M15 3v4" />
+  </Svg>
+)
+
+/* A warning: something reported, not something broken. */
+export const Alert = (p) => (
+  <Svg {...p}>
+    <path d="M12 4 21 19.5H3Z" />
+    <path d="M12 10v4" />
+    <path d="M12 17h.01" />
+  </Svg>
+)

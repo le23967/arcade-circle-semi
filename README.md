@@ -256,17 +256,17 @@ Sources: [SEGA maimai DX location finder](https://location.am-all.net/alm/locati
 | Screen | Route | What it does |
 | --- | --- | --- |
 | Circle, Now | tab | Friends as avatars, venues as pins; the same people as a list in a sheet over the map, each row ending in Join. |
-| Circle, Later | tab | Your circle's sessions, or every session open to anyone, each row ending in I'm in. |
-| Circle, Activity | tab | What people did and when, each line ending in an action. |
-| Circle, Scores | tab | Uncapped leaderboard with the 20 favourite limit drawn on it. |
-| Watch | tab | Clips from people you follow, with your queue position pinned above. |
+| Circle, Plans | tab | Your circle's sessions, or every session open to anyone, each row ending in I'm in. |
+| Circle, Activity | tab | Secondary: what people did and when, each line ending in an action. |
+| Circle, Scores | tab | Secondary: uncapped leaderboard with the 20 favourite limit drawn on it. |
+| Watch | `watch` | Clips from people you follow, with your queue position pinned above. Opens from the queue screen, Liked and Activity. |
 | Comments | modal | Comment thread on a clip. |
-| Arcades, Discover and Compare | tab | Recommends the quickest venue, then shows wait and travel trade-offs. |
-| Detail | `detail` | Venue stats, an expandable queue, and one primary action. |
-| Check-In | `checkin` | QR, NFC or Manual. |
-| Scan | `scan` | Cabinet placeholder, simulates a scan. |
-| Confirm | `confirm` | Pre-filled count to confirm or correct before joining. |
-| Checked In | `checkedin` | Your position and the running order. |
+| Arcades, Best now and Compare all | tab | Recommends the quickest venue, then shows wait, report age, working machines and distance for every venue. |
+| Detail | `detail` | The wait, three status chips and Check in & join queue; queue, machine reports, people, open sessions and other games below, each shut until opened. |
+| Check-In | `checkin` | Solo or partner, sharing on or off, then Scan QR, Tap NFC, or Manual as a fallback. |
+| Scan | `scan` | QR viewfinder or NFC prompt; the button stands in for the read. |
+| Confirm | `confirm` | Manual check-in: pre-filled count to confirm or correct before joining. |
+| Checked In | `checkedin` | Your position, the running order, and Leave queue or Check out. |
 | Session summary | `summary` | Session time and time queued. |
 | Plan a session | `plan` | Venue, game, time, who can come, and who to ask. |
 | Messages | sheet | Chats and requests over the tab they were opened from, with what is waiting counted on the way in. |
@@ -291,9 +291,21 @@ segment now with the second answer a step inside the first, the map keeps one
 control, and the card is a single way into the list. Fewer things to read
 before the one you need.
 
-The tab bar is Circle, Watch, Arcades, Me. The lo-fi sheet had Home, Compare,
-Maps and Me. Home and Compare merged into Arcades. Watch and Circle were added
-for the social layer. People come first because the project is about connection.
+The Week 9 critique said the same thing about the whole app: too much text,
+and too much reading before anyone could act. The Sprint 4 pass cut
+explanatory copy rather than rewording it. Status is shown as icon chips with
+a few characters each ("Updated 6m ago", "5/5 working", "1.4 km"), longer
+explanations sit behind the ? buttons, and secondary content on the arcade
+page is collapsed below the primary action. Circle's switch is Now and Plans;
+Activity and Scores stay one tap away as quieter tabs. Arcades' two views are
+Best now and Compare all. The interface says "machine" throughout, never
+"cabinet", and no longer shows prototype wording such as "(demo)".
+
+The tab bar is Circle, Arcades, Me. The lo-fi sheet had Home, Compare, Maps
+and Me. Home and Compare merged into Arcades, and Circle was added for the
+social layer. Watch was a tab until the field study; clips are a way to pass
+the time in a queue, not a reason to open the app, so it opens from the queue
+screen instead. People come first because the project is about connection.
 
 Maps is no longer its own tab. A venue directory would repeat Arcades, while a
 map of friends and venues belongs with the community tools in Circle. Route

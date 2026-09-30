@@ -1,74 +1,72 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import {
   Screen,
   TopBar,
   Body,
   PrimaryButton,
-  FreshBadge,
   StaleBadge,
   Info,
+  Stat,
+  GameDot,
+  Avatar,
+  gameTint,
 } from '../components/ui.jsx'
-import { Users, Clock, Chevron, Pin, Bars, Cabinet, Star } from '../components/Icons.jsx'
+import {
+  Users,
+  Chevron,
+  Pin,
+  Bars,
+  Cabinet,
+  Star,
+  Refresh,
+  Calendar,
+} from '../components/Icons.jsx'
 import {
   queueRoster,
   rosterKnownCount,
   estimateWaitMin,
   isStale,
-  freshnessLabel,
-  sourceLabel,
+  ageShort,
   pairsOf,
   peopleOf,
   partiesLabel,
   playersLabel,
   workingCabinetsOf,
+  workingLabel,
   SOLO_TURN_MIN,
   PAIR_TURN_MIN,
-  STALE_AFTER_MIN,
 } from '../lib/queue.js'
-import { WORKING, ageLabel, conditionNotes, noteTitle } from '../lib/machines.js'
+import { WORKING, ageLabel, conditionNotes, noteTitle, openIssues } from '../lib/machines.js'
 
 /* SCREEN 3 - Detail.
 
    The sketch listed Queue, Solo, Wait and Updated as four stats of the same
    size, and a heuristic evaluation found the obvious problem with that:
-   "there are a lot of queue numbers; which one should I actually use?".
+   "there are a lot of queue numbers; which one should I actually use?". Only
+   one of them answers the question this screen exists for, so the wait is
+   the only number set at display size and it comes first.
 
-   Only one of them answers the question this screen exists for, so the wait
-   is the only number set at display size and it comes first. The queue
-   breakdown sits under it, because a player who knows how a maimai line works
-   still wants the pairs and the solo count. Solo lost its own row: the
-   breakdown already says it, and the same number twice is what made the
-   screen look like it held more measures than it does.
+   The field study added two things a player needs before the trip (findings
+   A and B): how many machines are working, because a queue means different
+   things over five machines or two, and what state they are in. Freshness
+   has always travelled with the wait - a queue number is worth nothing
+   without its age.
 
-   Freshness moved with the wait. A queue number is worth nothing without its
-   age - the whole reason the group chat fails is that its answer arrives
-   "thirty or forty five minutes" later - so the report age carries a Fresh or
-   Stale badge and sits against the number it qualifies, rather than a row
-   below as a timestamp of its own.
-
-   A second pass cut what was left. Anything another screen or the phone
-   itself already holds is gone: the street address, because tapping the row
-   hands off to a maps app that has it; the clock time beside the report age,
-   because the age is the part you judge; and the venue name inside the
-   friends label, because it is in the title bar two rows up. The cabinet
-   count moved rather than went - it is a fact about the venue, so it shares
-   the venue row with the distance instead of sitting under the wait looking
-   like a second measure of it. Other games at the venue are one row until
-   asked for.
-
-   The field study moved the machines back (finding A). Participants judged
-   a queue by the cabinets behind it - "11th in queue can mean different
-   things if there's five cabinets or two" - and one looked for the count
-   exactly here: "this should be over here, how many machines there are". So
-   the working machines sit under the wait again, as the thing the wait is
-   divided by, and machine condition follows as its own short section,
-   because whether the machines work was the most repeated thing people
-   wanted to know before travelling (finding B).
+   The Week 9 critique then said the screen asked for too much reading before
+   anyone could act: six labelled sections stood between the wait and the
+   button. So the screen is now split in two. Above the button is the
+   decision, and nothing else: the game, the wait, and three short chips for
+   the report's age, the working machines and the distance - which also opens
+   directions, so the address row is gone. Below it is everything a player
+   may want to check afterwards - the running order, machine reports, who is
+   here, open sessions, other games - each one row, shut until asked for, so
+   none of it is read on the way to the button.
 
    The button says Check in & join queue because the two happen together:
-   you check in at the cabinet, and that is what puts you in this game's
-   running order. "Join queue" on its own led straight to three options, and
-   a participant could not tell whether they were already in. */
+   you check in at the machine, and that is what puts you in this game's
+   running order (finding C). With no machine working it says so instead,
+   and machine reports open by themselves, since marking one working again
+   is the way back. */
 export default function Detail({
   arcade,
   otherGames,
@@ -95,10 +93,8 @@ export default function Detail({
 
   return (
     <Screen>
-      {/* The badge used to sit up here as well. One state, stated once, next
-          to the number it applies to. */}
       <TopBar
-        title={`${arcade.short} · ${arcade.game}`}
+        title={arcade.short}
         onBack={onBack}
         right={
           onToggleFavourite && (
@@ -118,420 +114,343 @@ export default function Detail({
       />
 
       <Body>
-        <WaitStat arcade={arcade} stale={stale} mePosition={mePosition} />
+        <Decision arcade={arcade} stale={stale} onDirections={onDirections} />
 
-        <MachineCondition arcade={arcade} onReport={onReportMachine} />
-
-        {/* Tapping the address hands off to the phone's own maps app. We say
-            which arcade to go to; routing, transit and traffic are not ours to
-            rebuild. */}
-        <button
-          type="button"
-          onClick={onDirections}
-          className="flex w-full items-center gap-3 border-b border-line px-4 py-3 text-left"
-        >
-          <span className="text-ink-muted">
-            <Pin size={18} />
-          </span>
-          <span className="flex-1">
-            <span className="block text-sm text-ink">{arcade.name}</span>
-            {/* The distance is from a fixed demo origin, so it says which. */}
-            <span className="block text-xs tabular-nums text-ink-muted">
-              {arcade.distanceKm.toFixed(1)} km from UTS Broadway (demo)
-            </span>
-          </span>
-          <Chevron size={16} />
-        </button>
-
-        {/* The count on its own says how long the line is but not who is in
-            it. Expanding names the parties that checked in through the app
-            and leaves the rest as guests, which is the honest split. */}
-        <QueueStat
-          arcade={arcade}
-          open={queueOpen}
-          onToggle={onToggleQueue}
-          mePosition={mePosition}
-          onReport={onReport}
-        />
-
-        {friendsHere.length > 0 && (
-          <button
-            type="button"
-            onClick={onFriends}
-            className="flex w-full items-center gap-3 border-b border-line px-4 py-3 text-left"
-          >
-            <span className="text-ink-muted">
-              <Users size={18} />
-            </span>
-            <span className="flex-1">
-              <span className="block text-xs uppercase tracking-wide text-ink-muted">
-                People you follow
-              </span>
-              <span className="block text-sm font-semibold text-ink">
-                {friendsHere.map((p) => p.handle).join(', ')} here now
-              </span>
-            </span>
-            <Chevron size={16} />
-          </button>
-        )}
-
-        {/* Who you know there is mutual-only, so for a new player the row
-            above never renders. This one does: a session somebody posted
-            for anyone at this venue is a reason to come that needs no
-            circle at all. */}
-        {openCount > 0 && (
-          <button
-            type="button"
-            onClick={onOpenSessions}
-            className="flex w-full items-center gap-3 border-b border-line px-4 py-3 text-left"
-          >
-            <span className="text-ink-muted">
-              <Users size={18} />
-            </span>
-            <span className="flex-1">
-              <span className="block text-xs uppercase tracking-wide text-ink-muted">
-                Open to anyone
-              </span>
-              <span className="block text-sm font-semibold text-ink">
-                {openCount} {openCount === 1 ? 'session' : 'sessions'} posted
-                here
-              </span>
-            </span>
-            <Chevron size={16} />
-          </button>
-        )}
-
-        {otherGames.length > 0 && (
-          <OtherGames games={otherGames} onPick={onPickGame} />
-        )}
-
-        {/* One primary action. Correcting the count is an occasional,
-            secondary job, so it lives inside the queue list where the wrong
-            number is actually visible, and inside check-in where you are
-            looking at the line anyway.
-
-            It sits at the end of the content rather than pinned to the floor,
-            so a short screen does not open with a band of empty white between
-            the last row and the button. `sticky` keeps it on the bottom edge
-            once the queue is expanded and the page actually scrolls, so the
-            action is never scrolled away. */}
-        <div className="sticky bottom-0 border-t border-line bg-surface p-4">
-          {/* Nothing to queue for while no machine runs; the way back is
-              marking it working again under Machine condition. */}
-          {unavailable && (
-            <p className="mb-2 text-xs text-live">
-              No working {arcade.game} machine here right now. If it is running
-              again, mark it working under Machine condition.
-            </p>
-          )}
+        <div className="px-4 pb-5">
           <PrimaryButton onClick={onCheckIn} disabled={unavailable}>
-            Check in &amp; join queue
+            {unavailable ? 'No working machines' : 'Check in & join queue'}
           </PrimaryButton>
+        </div>
+
+        {/* Everything below the button is for checking, not deciding. The
+            band says so before a single row is read. */}
+        <div className="border-t-8 border-page">
+          <QueueSection
+            arcade={arcade}
+            open={queueOpen}
+            onToggle={onToggleQueue}
+            mePosition={mePosition}
+            onReport={onReport}
+          />
+
+          <MachineSection
+            key={`${arcade.id}-${arcade.gameId}`}
+            arcade={arcade}
+            defaultOpen={unavailable}
+            onReport={onReportMachine}
+          />
+
+          {/* Mutual-only, so for a new player this row never renders. The
+              next one does: a session posted for anyone here is a reason to
+              come that needs no circle at all. */}
+          {friendsHere.length > 0 && (
+            <div className="border-b border-line">
+              <SectionRow
+                icon={
+                  <span className="flex -space-x-1.5">
+                    {friendsHere.slice(0, 2).map((p) => (
+                      <Avatar key={p.handle} handle={p.handle} size={20} className="ring-2 ring-surface" />
+                    ))}
+                  </span>
+                }
+                title={friendsHere.map((p) => p.handle).join(', ')}
+                value="Here now"
+                onClick={onFriends}
+              />
+            </div>
+          )}
+
+          {openCount > 0 && (
+            <div className="border-b border-line">
+              <SectionRow
+                icon={<Calendar size={18} />}
+                title="Open sessions"
+                value={openCount}
+                onClick={onOpenSessions}
+              />
+            </div>
+          )}
+
+          {otherGames.length > 0 && <OtherGames games={otherGames} onPick={onPickGame} />}
         </div>
       </Body>
     </Screen>
   )
 }
 
-/* The decision value.
-
-   Everything else on this screen either explains this number or acts on it,
-   so nothing else is set at this size. The badge answers the second half of
-   the question - how old the number is allowed to get before it stops being
-   worth anything - using the same 15 minute threshold the ranking already
-   applies, so a stale venue reads the same here as it does on Arcades. */
-function WaitStat({ arcade, stale, mePosition }) {
-  const pairs = pairsOf(arcade)
-  const working = workingCabinetsOf(arcade)
+/* The decision, in the order it is made: which game, how long, and then
+   the three things that decide whether to trust the number and make the
+   trip. Each chip is an icon and a few characters; its name is there for
+   assistive technology. */
+function Decision({ arcade, stale, onDirections }) {
   const wait = estimateWaitMin(arcade)
-  const machines = `${working} working ${working === 1 ? 'machine' : 'machines'}`
+  const working = workingCabinetsOf(arcade)
+  const machineTone = working === 0 ? 'live' : working < arcade.cabinets ? 'stale' : 'default'
+  const km = arcade.distanceKm.toFixed(1)
 
   return (
-    <div className="flex items-start gap-3 border-b border-line px-4 py-4">
-      <span className="mt-1 text-ink-muted">
-        <Clock size={18} />
+    <section aria-label="Current wait" className="px-4 pb-4 pt-4">
+      <span
+        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold text-ink"
+        style={{ backgroundColor: gameTint(arcade.gameColor, 12) }}
+      >
+        <GameDot color={arcade.gameColor} />
+        {arcade.game}
       </span>
-      <div className="flex-1">
-        <p className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-ink-muted">
-          Estimated wait
-          <Info>
-            {arcade.solo} solo &times; {SOLO_TURN_MIN} min + {pairs} pair
-            {pairs === 1 ? '' : 's'} &times; {PAIR_TURN_MIN} min, divided by{' '}
-            {machines}. A solo set is about three songs; a pair holds one queue
-            position like a solo player, but holds the machine longer, because
-            pairing buys an extra song. Machines reported out of order are
-            left out. Reports older than {STALE_AFTER_MIN} min are marked
-            stale: still here, but not ranked as fastest.
-          </Info>
-        </p>
-        {wait === null ? (
-          <>
-            <p className="font-display text-3xl font-bold leading-tight text-live">
-              Unavailable
-            </p>
-            <p className="text-xs text-live">
-              No machine is working, so there is no wait to estimate.
-            </p>
-          </>
-        ) : (
-          <>
-            <p className="font-display text-3xl font-bold leading-tight tabular-nums text-ink">
-              About {wait} min
-            </p>
-            <p className="text-xs tabular-nums text-ink-muted">
-              {working === arcade.cabinets
-                ? `across ${arcade.cabinets} ${arcade.cabinets === 1 ? 'machine' : 'machines'}`
-                : `across ${working} of ${arcade.cabinets} machines, the rest out of order`}
-            </p>
-          </>
-        )}
 
-        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
-          {stale ? <StaleBadge /> : <FreshBadge />}
-          <span className="text-xs tabular-nums text-ink-muted">
-            {freshnessLabel(arcade)} &middot; {sourceLabel(arcade, mePosition)}
+      <p className="mt-4 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-muted">
+        Estimated wait
+        <Info>
+          Queue &divide; working machines. Solo about {SOLO_TURN_MIN} min, pair
+          about {PAIR_TURN_MIN}.
+        </Info>
+      </p>
+      {wait === null ? (
+        <p className="mt-1 font-display text-4xl font-bold leading-tight text-live">
+          Unavailable
+        </p>
+      ) : (
+        <p className="mt-1 font-display leading-none text-ink">
+          <span className="text-6xl font-bold tabular-nums tracking-tight">
+            {stale ? '~' : ''}
+            {wait}
           </span>
-        </div>
-        {stale && (
-          <p className="mt-1 text-xs text-stale">
-            Left out of Fastest now until someone updates it.
-          </p>
-        )}
+          <span className="ml-1.5 text-2xl font-semibold text-ink-muted">min</span>
+        </p>
+      )}
+
+      <div className="mt-4 flex flex-wrap items-center gap-1.5">
+        <Stat pill tone={stale ? 'stale' : 'fresh'} label="Report" icon={<Refresh size={13} />}>
+          {stale ? `Stale · ${ageShort(arcade)}` : `Updated ${ageShort(arcade)}`}
+        </Stat>
+        <Stat pill tone={machineTone} label="Machines" icon={<Cabinet size={14} />}>
+          {workingLabel(arcade)}
+        </Stat>
+        {/* The phone's own maps app has the address and the route; this
+            only says how far, and hands off. */}
+        <button
+          type="button"
+          onClick={onDirections}
+          aria-label={`Directions, ${km} km away`}
+          className="relative inline-flex items-center gap-1 rounded-full bg-sunken px-2.5 py-1 text-xs font-medium tabular-nums text-ink transition-colors duration-150 before:absolute before:inset-x-0 before:-inset-y-2 before:content-[''] hover:bg-line"
+        >
+          <Pin size={13} />
+          {km} km
+          <Chevron size={12} />
+        </button>
       </div>
+    </section>
+  )
+}
+
+/* One secondary row: an icon, a short name, the one value worth seeing
+   shut, and a chevron that says whether it opens here or goes somewhere.
+   `open` is null for a link, true or false for a section. */
+function SectionRow({ icon, title, value, valueTone = 'text-ink-muted', open = null, controls, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-expanded={open === null ? undefined : open}
+      aria-controls={open === null ? undefined : controls}
+      className="flex min-h-[52px] w-full items-center gap-3 px-4 py-2.5 text-left transition-colors duration-150 hover:bg-sunken"
+    >
+      <span className="flex w-6 flex-none justify-center text-ink-muted">{icon}</span>
+      <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{title}</span>
+      {value !== undefined && value !== null && (
+        <span className={`flex-none text-sm tabular-nums ${valueTone}`}>{value}</span>
+      )}
+      <span
+        className={`flex-none text-ink-subtle transition-transform duration-200 ease-soft ${
+          open === null ? '' : open ? '-rotate-90' : 'rotate-90'
+        }`}
+      >
+        <Chevron size={16} />
+      </span>
+    </button>
+  )
+}
+
+/* The running order. Shut, the count; open, who is in it - the parties
+   that checked in through the app by name and the rest as guests, which is
+   the honest split - and the correction for when the count is wrong, where
+   the wrong number is actually visible. */
+function QueueSection({ arcade, open, onToggle, mePosition, onReport }) {
+  const id = useId()
+  const rows = queueRoster(arcade, { mePosition })
+  const known = rosterKnownCount(arcade, mePosition)
+  const pairs = pairsOf(arcade)
+
+  return (
+    <div className="border-b border-line">
+      <SectionRow
+        icon={<Users size={18} />}
+        title="Queue"
+        value={partiesLabel(arcade.queue)}
+        open={Boolean(open)}
+        controls={id}
+        onClick={onToggle}
+      />
+
+      {open && (
+        <div id={id} className="anim-row pb-2">
+          <p className="px-4 pb-2 pl-[52px] text-xs tabular-nums text-ink-muted">
+            {pairs} {pairs === 1 ? 'pair' : 'pairs'} &middot; {arcade.solo} solo &middot;{' '}
+            {playersLabel(peopleOf(arcade))}
+          </p>
+          <ol className="border-t border-line">
+            {rows.map((r) => (
+              <li
+                key={r.position}
+                className={`flex items-center gap-3 border-b border-line px-4 py-2 ${
+                  r.you ? 'bg-brand-50' : ''
+                }`}
+              >
+                <span className="w-6 text-center text-xs tabular-nums text-ink-subtle">
+                  {r.position}
+                </span>
+                <span
+                  className={`min-w-0 flex-1 truncate text-sm ${
+                    r.app || r.you ? 'font-semibold text-ink' : 'text-ink-muted'
+                  }`}
+                >
+                  {r.you
+                    ? 'You'
+                    : r.app
+                      ? `${r.handle}${r.plus ? ` +${r.plus}` : ''}`
+                      : `+${(r.plus ?? 0) + 1} guest${r.plus ? 's' : ''}`}
+                </span>
+                <span
+                  className={`text-xs ${r.state === 'Playing now' ? 'text-fresh' : 'text-ink-muted'}`}
+                >
+                  {r.state}
+                </span>
+              </li>
+            ))}
+          </ol>
+
+          <div className="flex items-center gap-2 px-4 pt-2">
+            <p className="flex flex-1 items-center gap-1.5 text-xs tabular-nums text-ink-muted">
+              {known}/{arcade.queue} via the app
+              <Info>The rest come from count reports and show as guests.</Info>
+            </p>
+            <button
+              type="button"
+              onClick={onReport}
+              className="min-h-11 flex-none rounded-xl border border-line-strong px-3 text-xs font-semibold text-ink transition-colors duration-150 hover:bg-sunken"
+            >
+              Update count
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-/* Machine condition.
-
-   How many of this game's machines run, and the one or two most useful
-   things people have reported about them, each with its age - "one to two
-   comments", as a participant put it, not a rating. Reporting is one tap
-   away and anonymous. */
+/* Machine reports. The working count is already a chip above the button;
+   this is the "one to two comments" behind it, each with its age, and the
+   way to add one. Anonymous, one tap. */
 const NOTE_DOT = { out: 'bg-live', [WORKING]: 'bg-fresh' }
 
-function MachineCondition({ arcade, onReport }) {
-  const working = workingCabinetsOf(arcade)
-  const total = arcade.cabinets
+function MachineSection({ arcade, defaultOpen, onReport }) {
+  const id = useId()
+  const [open, setOpen] = useState(defaultOpen)
   const notes = conditionNotes(arcade)
-  const shown = notes.slice(0, 2)
-  const more = notes.length - shown.length
-  const headline =
-    working === 0
-      ? total === 1
-        ? 'Not working'
-        : `None of ${total} working`
-      : working === total
-        ? total === 1
-          ? '1 of 1 working'
-          : `All ${total} working`
-        : `${working} of ${total} working`
+  const problems = openIssues(arcade).length
 
   return (
-    <div className="border-b border-line px-4 py-3">
-      <div className="flex items-start gap-3">
-        <span className="mt-0.5 text-ink-muted">
-          <Cabinet size={18} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-xs uppercase tracking-wide text-ink-muted">
-            Machine condition
-          </p>
-          <p
-            className={`text-sm font-semibold tabular-nums ${
-              working === 0 ? 'text-live' : 'text-ink'
-            }`}
-          >
-            {headline}
-          </p>
-          {shown.length === 0 ? (
-            <p className="text-xs text-ink-muted">No problems reported.</p>
-          ) : (
-            <ul className="mt-1 space-y-1">
-              {shown.map((issue) => (
-                <li key={issue.id} className="flex items-start gap-1.5 text-xs">
+    <div className="border-b border-line">
+      <SectionRow
+        icon={<Cabinet size={18} />}
+        title="Machine reports"
+        value={problems > 0 ? `${problems} ${problems === 1 ? 'issue' : 'issues'}` : 'No issues'}
+        valueTone={problems > 0 ? 'font-medium text-stale' : 'text-ink-muted'}
+        open={open}
+        controls={id}
+        onClick={() => setOpen((o) => !o)}
+      />
+
+      {open && (
+        <div id={id} className="anim-row px-4 pb-3 pl-[52px]">
+          {notes.length > 0 && (
+            <ul className="space-y-2">
+              {notes.map((issue) => (
+                <li key={issue.id} className="flex items-start gap-2">
                   <span
-                    className={`mt-1.5 h-1.5 w-1.5 flex-none rounded-full ${
-                      NOTE_DOT[issue.type] ?? 'bg-stale'
-                    }`}
+                    className={`mt-1.5 h-2 w-2 flex-none rounded-full ${NOTE_DOT[issue.type] ?? 'bg-stale'}`}
                   />
-                  <span className="min-w-0 flex-1 text-ink">
+                  <span className="min-w-0 flex-1 text-sm text-ink">
                     {noteTitle(issue)}
                     {issue.note && (
-                      <span className="text-ink-muted"> &middot; &ldquo;{issue.note}&rdquo;</span>
+                      <span className="block text-xs text-ink-muted">&ldquo;{issue.note}&rdquo;</span>
                     )}
                   </span>
-                  <span className="flex-none tabular-nums text-ink-subtle">
+                  <span className="flex-none text-xs tabular-nums text-ink-subtle">
                     {ageLabel(issue.minsAgo)}
                   </span>
                 </li>
               ))}
             </ul>
           )}
-          {more > 0 && (
-            <p className="mt-0.5 text-[11px] text-ink-subtle">
-              +{more} more, listed in the report
-            </p>
-          )}
           <button
             type="button"
             onClick={onReport}
-            className="mt-2 min-h-11 rounded-xl border border-line-strong px-3 text-xs font-semibold text-ink transition-colors duration-150 hover:bg-sunken"
+            className={`min-h-11 rounded-xl border border-line-strong px-3 text-xs font-semibold text-ink transition-colors duration-150 hover:bg-sunken ${
+              notes.length > 0 ? 'mt-3' : ''
+            }`}
           >
-            Report machine issue
+            Report an issue
           </button>
         </div>
-      </div>
-    </div>
-  )
-}
-
-/* Other games at this venue.
-
-   Five more rows of queue counts and waits, none of them about the game you
-   opened. They are still one tap away, but they no longer sit under the
-   decision as a second table competing for the same attention. */
-function OtherGames({ games, onPick }) {
-  const [open, setOpen] = useState(false)
-
-  return (
-    <div className="border-b border-line">
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left"
-      >
-        <span className="text-ink-muted">
-          <Bars size={18} />
-        </span>
-        <span className="flex-1 text-sm text-ink">Also at this venue</span>
-        <span className="text-xs tabular-nums text-ink-muted">
-          {games.length} {games.length === 1 ? 'game' : 'games'}
-        </span>
-        <span className={`text-ink-muted ${open ? '-rotate-90' : 'rotate-90'}`}>
-          <Chevron size={18} />
-        </span>
-      </button>
-
-      {open && (
-        <ul className="border-t border-line px-4 py-1">
-          {games.map((g) => (
-            <li key={g.gameId}>
-              <button
-                type="button"
-                onClick={() => onPick(g.gameId)}
-                className="flex w-full items-center gap-2 py-1.5 text-left"
-              >
-                <span className="flex-1 text-sm text-ink">{g.game}</span>
-                <span className="text-xs tabular-nums text-ink-muted">
-                  {partiesLabel(g.queue)}
-                </span>
-                <span className="w-20 text-right text-sm tabular-nums text-ink">
-                  {estimateWaitMin(g) === null ? 'Unavailable' : `~${estimateWaitMin(g)} min`}
-                </span>
-                {isStale(g) && <StaleBadge />}
-              </button>
-            </li>
-          ))}
-        </ul>
       )}
     </div>
   )
 }
 
-function QueueStat({ arcade, open, onToggle, mePosition, onReport }) {
-  const rows = queueRoster(arcade, { mePosition })
-  const known = rosterKnownCount(arcade, mePosition)
+/* Other games at this venue: one row until asked for, then each game's
+   wait, so switching game here is one tap. */
+function OtherGames({ games, onPick }) {
+  const id = useId()
+  const [open, setOpen] = useState(false)
 
   return (
     <div className="border-b border-line">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        className="flex w-full items-start gap-3 px-4 py-3 text-left"
-      >
-        <span className="mt-0.5 text-ink-muted">
-          <Users size={18} />
-        </span>
-        {/* Secondary by design: the same three facts as before, one step down
-            in size, so they support the wait instead of competing with it. */}
-        <span className="flex-1">
-          <span className="block text-xs uppercase tracking-wide text-ink-muted">
-            Queue
-          </span>
-          <span className="block text-sm font-semibold tabular-nums text-ink">
-            {partiesLabel(arcade.queue)} waiting
-          </span>
-          <span className="block text-xs text-ink-muted">
-            {pairsOf(arcade)} pair{pairsOf(arcade) === 1 ? '' : 's'} &middot;{' '}
-            {arcade.solo} solo &middot; {playersLabel(peopleOf(arcade))} in total
-          </span>
-        </span>
-        <span className={`mt-1 text-ink-muted ${open ? '-rotate-90' : 'rotate-90'}`}>
-          <Chevron size={18} />
-        </span>
-      </button>
+      <SectionRow
+        icon={<Bars size={18} />}
+        title="Other games here"
+        value={games.length}
+        open={open}
+        controls={id}
+        onClick={() => setOpen((o) => !o)}
+      />
 
       {open && (
-        <>
-          <ol className="border-t border-line">
-            {rows.map((r) => (
-              <li
-                key={r.position}
-                className={`flex items-start gap-3 border-b border-line px-4 py-2 last:border-b-0 ${
-                  r.you ? 'bg-sunken' : ''
-                }`}
-              >
-                <span className="w-4 pt-0.5 text-xs tabular-nums text-ink-muted">
-                  {r.position}
-                </span>
-
-                <span className="min-w-0 flex-1">
-                  <span
-                    className={`block text-sm ${
-                      r.app || r.you
-                        ? 'font-semibold text-ink'
-                        : 'text-ink-muted'
-                    }`}
-                  >
-                    {r.you
-                      ? 'You'
-                      : r.app
-                        ? `${r.handle}${r.plus ? ` +${r.plus}` : ''}`
-                        : `+${(r.plus ?? 0) + 1} guest${r.plus ? 's' : ''}`}
+        <ul id={id} className="anim-row pb-1">
+          {games.map((g) => {
+            const wait = estimateWaitMin(g)
+            return (
+              <li key={g.gameId}>
+                <button
+                  type="button"
+                  onClick={() => onPick(g.gameId)}
+                  className="flex min-h-11 w-full items-center gap-3 px-4 text-left transition-colors duration-150 hover:bg-sunken"
+                >
+                  <span className="flex w-6 flex-none justify-center">
+                    <GameDot color={g.gameColor} className="h-2.5 w-2.5" />
                   </span>
-                </span>
-
-                <span className="pt-0.5 text-xs text-ink-muted">{r.state}</span>
+                  <span className="flex-1 text-sm text-ink">{g.game}</span>
+                  {isStale(g) && wait !== null && <StaleBadge />}
+                  <span
+                    className={`w-20 text-right text-sm tabular-nums ${wait === null ? 'text-live' : 'text-ink'}`}
+                  >
+                    {wait === null ? 'Unavailable' : `${isStale(g) ? '~' : ''}${wait} min`}
+                  </span>
+                </button>
               </li>
-            ))}
-          </ol>
-
-          <div className="flex items-center gap-2 px-4 py-2">
-            <p className="flex flex-1 items-start gap-1.5 text-xs text-ink-muted">
-              <span>
-                <span className="tabular-nums">{known}</span> of{' '}
-                <span className="tabular-nums">{arcade.queue}</span> parties
-                checked in through the app.
-              </span>
-              <Info>
-                The queue count comes from reports, so it includes people who
-                are not running this app. They are held as guests rather than
-                guessed at. A venue where nobody checks in is also a venue whose
-                number goes stale.
-              </Info>
-            </p>
-            <button
-              type="button"
-              onClick={onReport}
-              className="flex-none rounded-md border border-line-strong px-2 py-1 text-xs font-medium text-ink"
-            >
-              Update count
-            </button>
-          </div>
-        </>
+            )
+          })}
+        </ul>
       )}
     </div>
   )

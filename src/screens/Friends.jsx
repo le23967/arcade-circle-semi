@@ -10,15 +10,15 @@ import {
   GameDot,
   ActionButton,
   QuietAction,
+  ViewSwitch,
 } from '../components/ui.jsx'
-import { Plus, Comment, UserPlus } from '../components/Icons.jsx'
+import { Plus, Comment, UserPlus, Pulse, Bars, Check } from '../components/Icons.jsx'
 import { FRIENDS, SONGS, OLD_SITE_FAVOURITE_CAP, ACTIVITY } from '../social.js'
 import { GAMES, gameColor, gameLabel } from '../data.js'
 import { machinesLabel, resolveVenues, venueForPlayer } from '../lib/queue.js'
 import {
   leaderboard,
   belowOldCap,
-  playerSignal,
   relationshipOf,
   circleSessions,
   openSessions,
@@ -51,7 +51,14 @@ import FriendsMap from './FriendsMap.jsx'
    Open sessions are the one thing here not scoped to the people you follow.
    Every other view is empty for a player with no mutuals, and the app was
    telling that player, in effect, to come back once they had friends - which
-   is backwards, since making them is what they are here for. */
+   is backwards, since making them is what they are here for.
+
+   The Week 9 critique then asked why four segments of equal weight sat on
+   a tab whose job is two things: who is out now, and what is planned. So
+   those two are the switch - Now and Plans, the second renamed from Later
+   so it says what it holds - and Activity and Scores are quiet tabs beside
+   it: still one tap, no longer drawn as equals. The game control that says
+   which queue the map's waits are for moved onto the map it qualifies. */
 export default function Friends({
   arcades,
   game,
@@ -135,10 +142,8 @@ export default function Friends({
               )}
             </button>
             <Info>
-              Presence is venue level and mutual-only: you appear here to people
-              you follow back, and only while checked in and visible. Open
-              sessions are the one exception - anyone on the app can see and
-              join those, because the host chose to post them that way.
+              Only people who follow each other see who is at which arcade.
+              Open sessions are public.
             </Info>
           </span>
         }
@@ -147,57 +152,31 @@ export default function Friends({
       {/* 'open' is Later with the other filter selected. It stays a section
           id of its own so a venue page or a freshly posted session can land
           straight on it, without a second piece of state to keep in step. */}
-      <div className="flex gap-1.5 border-b border-line px-4 py-2">
-        <Seg on={section === 'now'} onClick={() => onSection('now')}>
-          Now
-        </Seg>
-        <Seg
-          on={section === 'planned' || section === 'open'}
-          onClick={() => onSection('planned')}
-        >
-          Later
-        </Seg>
-        <Seg on={section === 'activity'} onClick={() => onSection('activity')}>
+      <div className="flex items-center gap-1 border-b border-line px-4 py-2">
+        <ViewSwitch
+          label="Circle view"
+          className="flex-1"
+          value={section === 'open' ? 'planned' : section}
+          onChange={onSection}
+          options={[
+            { id: 'now', label: 'Now' },
+            { id: 'planned', label: 'Plans' },
+          ]}
+        />
+        <QuietTab on={section === 'activity'} onClick={() => onSection('activity')} icon={<Pulse size={15} />}>
           Activity
-        </Seg>
-        <Seg on={section === 'scores'} onClick={() => onSection('scores')}>
+        </QuietTab>
+        <QuietTab on={section === 'scores'} onClick={() => onSection('scores')} icon={<Bars size={15} />}>
           Scores
-        </Seg>
+        </QuietTab>
       </div>
 
-      {/* The wait on every pin is for one game's queue, and the map never
-          said which. One compact control names it and changes it; it sits on
-          Now only, since Later, Activity and Scores are not per game. */}
-      {section === 'now' && (
-        <div className="flex items-center gap-2 border-b border-line px-4 py-2">
-          <label
-            htmlFor="circle-game"
-            className="text-xs font-semibold uppercase tracking-wide text-ink-muted"
-          >
-            Queue game
-          </label>
-          <span className="flex min-w-0 flex-1 items-center gap-1.5">
-            <GameDot color={gameColor(game)} />
-            <select
-              id="circle-game"
-              value={game}
-              onChange={(e) => onGame(e.target.value)}
-              className="min-w-0 flex-1 rounded-md border border-line-strong bg-surface px-2 py-1 text-sm font-semibold text-ink outline-none focus:border-brand-500"
-            >
-              {GAMES.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.label}
-                </option>
-              ))}
-            </select>
-          </span>
-        </div>
-      )}
       {section === 'now' && (
         <Now
           arcades={venues}
           rawArcades={arcades}
           game={game}
+          onGame={onGame}
           following={following}
           present={present}
           presenceHint={presenceHint}
@@ -250,6 +229,24 @@ export default function Friends({
         <Scores song={song} onSong={onSong} me={me} onOpenPlayer={onOpenPlayer} />
       )}
     </Screen>
+  )
+}
+
+/* A secondary destination on the tab: reachable in one tap, drawn as text
+   so it does not compete with the switch beside it. */
+function QuietTab({ on, onClick, icon, children }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={onClick}
+      className={`inline-flex min-h-11 flex-none items-center gap-1 rounded-full px-2.5 text-xs transition-colors duration-150 ${
+        on ? 'bg-sunken font-semibold text-ink' : 'text-ink-muted hover:text-ink'
+      }`}
+    >
+      {icon}
+      {children}
+    </button>
   )
 }
 
@@ -341,20 +338,15 @@ function HereNow({
     <Body>
       {venue && (
         <div className="flex items-center gap-2 border-b border-line bg-brand-50 px-4 py-2.5">
-          <span className="min-w-0 flex-1">
-            <span className="block truncate font-display text-sm font-semibold text-ink">
-              {venue.name}
-            </span>
-            <span className="block text-xs text-ink-muted">
-              People you follow here now
-            </span>
+          <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold text-ink">
+            {venue.short}
           </span>
           <button
             type="button"
             onClick={onClearVenue}
-            className="flex-none rounded-full border border-brand-200 bg-surface px-3 py-1.5 text-xs font-semibold text-brand-700 transition-colors duration-150 hover:bg-brand-100"
+            className="min-h-11 flex-none rounded-full px-3 text-xs font-semibold text-brand-700 transition-colors duration-150 hover:bg-brand-100"
           >
-            Show all arcades
+            All arcades
           </button>
         </div>
       )}
@@ -363,15 +355,14 @@ function HereNow({
           point somewhere rather than just report the absence. */}
       {venues.length === 0 && (
         <div className="px-4 py-6 text-center">
-          <p className="text-sm text-ink-muted">
-            Nobody who shares their arcade with you is{' '}
-            {venue ? `at ${venue.short}` : 'at an arcade'} right now.
+          <p className="text-sm font-medium text-ink">
+            Nobody out {venue ? `at ${venue.short}` : ''} right now
           </p>
           {presenceHint && (
-            <p className="mt-1 text-xs leading-relaxed text-ink-subtle">{presenceHint}</p>
+            <p className="mt-1 text-xs text-ink-muted">{presenceHint}</p>
           )}
           <QuietAction className="mt-2" onClick={onSeeOpen}>
-            See sessions open to anyone
+            See open sessions
           </QuietAction>
         </div>
       )}
@@ -399,7 +390,6 @@ function HereNow({
           )}
 
           {players.map((p, i) => {
-            const signal = playerSignal(p.handle)
             /* A place in a queue is read against the machines behind it. */
             const queueVenue = p.position ? venueForPlayer(rawArcades, p, game) : null
             return (
@@ -418,16 +408,12 @@ function HereNow({
                     <span className="block truncate text-sm font-semibold text-ink">
                       {p.handle}
                     </span>
-                    <span className="block truncate text-xs text-ink-muted">
-                      {p.games.join(' · ')} &middot; {p.sinceMin}m
-                      {p.position ? ` · #${p.position} in the queue` : ''}
-                      {queueVenue ? ` · ${machinesLabel(queueVenue)}` : ''}
+                    <span className="block truncate text-xs tabular-nums text-ink-muted">
+                      {p.sinceMin}m &middot;{' '}
+                      {p.position
+                        ? `#${p.position} in queue${queueVenue ? ` · ${machinesLabel(queueVenue)}` : ''}`
+                        : p.games.join(' · ')}
                     </span>
-                    {signal && (
-                      <span className="block truncate text-[11px] text-ink-subtle">
-                        {signal}
-                      </span>
-                    )}
                   </span>
                 </button>
                 {/* One button that reports its own state and turns off again,
@@ -517,7 +503,7 @@ function Later({
             Your circle
           </Seg>
           <Seg on={open} onClick={() => onScope('open')}>
-            Open to anyone
+            Open
           </Seg>
         </div>
         <ActionButton
@@ -530,20 +516,15 @@ function Later({
 
       {venue && (
         <div className="flex items-center gap-2 border-b border-line bg-brand-50 px-4 py-2.5">
-          <span className="min-w-0 flex-1">
-            <span className="block truncate font-display text-sm font-semibold text-ink">
-              {venue.name}
-            </span>
-            <span className="block text-xs text-ink-muted">
-              Sessions open to anyone here
-            </span>
+          <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold text-ink">
+            {venue.short}
           </span>
           <button
             type="button"
             onClick={onClearVenue}
-            className="flex-none rounded-full border border-brand-200 bg-surface px-3 py-1.5 text-xs font-semibold text-brand-700 transition-colors duration-150 hover:bg-brand-100"
+            className="min-h-11 flex-none rounded-full px-3 text-xs font-semibold text-brand-700 transition-colors duration-150 hover:bg-brand-100"
           >
-            Show all arcades
+            All arcades
           </button>
         </div>
       )}
@@ -568,14 +549,12 @@ function Later({
 
       {rows.length === 0 && (
         <div className="px-4 py-6 text-center">
-          <p className="text-sm text-ink-muted">
-            {open
-              ? `Nothing open ${venue ? `at ${venue.short}` : 'right now'}. Post one, and anyone on the app can say they\u2019re in.`
-              : 'Nothing planned yet. Pick a venue, a game and a time, and ask whoever you want there - or open it to anyone.'}
+          <p className="text-sm font-medium text-ink">
+            {open ? `Nothing open${venue ? ` at ${venue.short}` : ''}` : 'No plans yet'}
           </p>
           {!open && (
             <QuietAction className="mt-2" onClick={() => onScope('open')}>
-              See sessions open to anyone
+              See open sessions
             </QuietAction>
           )}
         </div>
@@ -697,9 +676,9 @@ function SessionList({
               thread, since a stranger who said "anyone" has asked to hear
               from you. */}
           {going && (
-            <p className="text-xs font-medium text-fresh">
-              {s.host} has been told you&rsquo;re coming &middot;{' '}
-              {s.going.length + 1} going
+            <p className="flex flex-wrap items-center gap-x-1 text-xs font-medium text-fresh">
+              <Check size={13} />
+              {s.host} told &middot; {s.going.length + 1} going
               {s.open && !rel?.mutual && (
                 <>
                   {' '}
@@ -818,13 +797,8 @@ function Activity({
                 {e.type === 'checkout' && <>left {venueName(e.venue)}</>}
                 {e.type === 'played' && (
                   <>
-                    played a set at {venueName(e.venue)}:{' '}
-                    {e.songs.map((t, k) => (
-                      <span key={t}>
-                        {k > 0 && ', '}
-                        &ldquo;{t}&rdquo;
-                      </span>
-                    ))}
+                    played {e.songs.length} {e.songs.length === 1 ? 'song' : 'songs'} at{' '}
+                    {venueName(e.venue)}
                   </>
                 )}
                 {e.type === 'best' && (
@@ -864,12 +838,12 @@ function Activity({
                 )}
                 {e.type === 'checkout' && (
                   <ActionButton onClick={() => onPlan({ invite: e.handle })}>
-                    Plan the next one
+                    Plan next
                   </ActionButton>
                 )}
                 {e.type === 'played' && (
                   <ActionButton onClick={() => onOpenArcade(e.venue)}>
-                    See that venue
+                    Open arcade
                   </ActionButton>
                 )}
                 {e.type === 'best' && (
@@ -878,7 +852,7 @@ function Activity({
                       onMessage(e.handle, 'Nice score, what did you change?')
                     }
                   >
-                    Send congrats
+                    Congrats
                   </ActionButton>
                 )}
                 {e.type === 'clip' && (
@@ -912,9 +886,8 @@ function Scores({ song, onSong, me, onOpenPlayer }) {
 
       <div className="border-b border-line px-4 py-3">
         <p className="font-display text-sm font-semibold text-ink">{current.title}</p>
-        <p className="text-xs text-ink-muted">
-          {current.chart} &middot; ranked against all{' '}
-          <span className="tabular-nums">{FRIENDS.length}</span> people you follow
+        <p className="text-xs tabular-nums text-ink-muted">
+          {current.chart} &middot; {FRIENDS.length} people you follow
         </p>
       </div>
 
@@ -945,7 +918,7 @@ function Scores({ song, onSong, me, onOpenPlayer }) {
                   {r.me ? 'You' : r.handle}
                 </span>
                 {r.at && (
-                  <span className="block text-[11px] text-fresh">at an arcade now</span>
+                  <span className="block text-[11px] text-fresh">Out now</span>
                 )}
               </span>
               <span className="text-right font-display text-sm tabular-nums text-ink">
@@ -967,12 +940,10 @@ function CapLine({ cut }) {
   return (
     <div className="border-y border-dashed border-stale bg-stale-bg px-4 py-2">
       <p className="text-xs font-bold uppercase tracking-wide text-stale">
-        Official site&rsquo;s {OLD_SITE_FAVOURITE_CAP}-favourite limit
+        Official site stops at {OLD_SITE_FAVOURITE_CAP}
       </p>
-      <p className="text-xs text-ink-muted">
-        Everyone below is invisible on the official site &middot; {cut.count}{' '}
-        {cut.count === 1 ? 'player' : 'players'}, {cut.hereNow} of them at an arcade
-        now.
+      <p className="text-xs tabular-nums text-ink-muted">
+        {cut.count} more only on Arcade Circle
       </p>
     </div>
   )

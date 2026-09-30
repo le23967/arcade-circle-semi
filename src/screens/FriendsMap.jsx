@@ -2,15 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
 import { Circle, MapContainer, Marker, TileLayer } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import { Avatar, GameDot, PrimaryButton, Chip } from '../components/ui.jsx'
-import { Users, Clock, Chevron, Crosshair } from '../components/Icons.jsx'
-import { ME_MAP } from '../data.js'
+import { Avatar, GameDot, PrimaryButton, Chip, Stat } from '../components/ui.jsx'
+import { Clock, Chevron, Crosshair, Cabinet, Pin, Refresh } from '../components/Icons.jsx'
+import { GAMES, ME_MAP, gameColor } from '../data.js'
 import {
   estimateWaitMin,
   isStale,
-  freshnessLabel,
+  ageShort,
   machinesLabel,
-  partiesLabel,
+  workingLabel,
   venueForPlayer,
 } from '../lib/queue.js'
 
@@ -224,6 +224,8 @@ export default function FriendsMap({
      card can find the queue they are actually in. */
   rawArcades = [],
   game,
+  /* The waits on the pins are one game's queues; this changes which. */
+  onGame,
   /* Who is out, already scoped to the people allowed to see you and whom
      you are allowed to see. */
   present = [],
@@ -391,6 +393,32 @@ export default function FriendsMap({
         />
       </MapContainer>
 
+      {/* Which game the waits on the pins are for. It used to be a row of
+          its own above the map, labelled; on the map, next to the numbers it
+          qualifies, the game's own dot and name are label enough. */}
+      {onGame && (
+        <div className="pointer-events-none absolute left-3 top-3 z-[1000]">
+          <label className="pointer-events-auto relative flex min-h-11 items-center gap-1.5 rounded-full border border-line bg-surface pl-3 pr-2 shadow-lg">
+            <span className="sr-only">Waits for</span>
+            <GameDot color={gameColor(game)} className="h-2.5 w-2.5" />
+            <select
+              value={game}
+              onChange={(e) => onGame(e.target.value)}
+              className="h-11 max-w-[150px] appearance-none bg-transparent pr-6 text-sm font-semibold text-ink outline-none"
+            >
+              {GAMES.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.label}
+                </option>
+              ))}
+            </select>
+            <span className="pointer-events-none absolute right-3 rotate-90 text-ink-muted" aria-hidden="true">
+              <Chevron size={14} />
+            </span>
+          </label>
+        </div>
+      )}
+
       {/* One control. Zoom is pinch, scroll or keyboard on the map itself,
           and the map opens framed on all three venues, so the only thing a
           button has to do is take you to yourself. */}
@@ -411,9 +439,9 @@ export default function FriendsMap({
       {tileState !== 'ready' && (
         <span
           role="status"
-          className="pointer-events-none absolute left-3 top-3 z-[1000] rounded-full border border-line bg-surface/95 px-2 py-1 text-[10px] font-medium text-ink-muted shadow-sm"
+          className="pointer-events-none absolute left-3 top-16 z-[1000] rounded-full border border-line bg-surface/95 px-2 py-1 text-[10px] font-medium text-ink-muted shadow-sm"
         >
-          {tileState === 'error' ? 'Map tiles are having trouble loading' : 'Loading map…'}
+          {tileState === 'error' ? 'Map unavailable' : 'Loading map…'}
         </span>
       )}
 
@@ -536,7 +564,7 @@ function SummaryCard({ friends, arcades, onOpenList, emptyHint = null }) {
       <button
         type="button"
         onClick={onOpenList}
-        className="flex w-full items-center gap-3 text-left"
+        className="flex min-h-11 w-full items-center gap-3 text-left"
       >
         <span className="flex -space-x-2">
           {friends.slice(0, 3).map((p) => (
@@ -550,7 +578,7 @@ function SummaryCard({ friends, arcades, onOpenList, emptyHint = null }) {
           <span className="block truncate text-[11px] text-ink-muted">
             {venues.length > 0
               ? venues.map((a) => a.short).join(' · ')
-              : emptyHint || 'Nobody you follow both ways is out right now'}
+              : emptyHint || 'Nobody out right now'}
           </span>
         </span>
         <span className="text-xs font-semibold text-brand-600">List</span>
@@ -571,23 +599,25 @@ function VenueCard({ arcade, friends, onEnter, onPickFriend, onClose }) {
           <p className="truncate font-display text-base font-semibold text-ink">
             {arcade.name}
           </p>
-          <p className="flex flex-wrap items-center gap-x-2 text-xs text-ink-muted">
-            <span className="inline-flex items-center gap-1 tabular-nums">
-              <Clock size={12} />{' '}
-              {estimateWaitMin(arcade) === null ? (
-                <span className="text-live">unavailable</span>
-              ) : (
-                `~${estimateWaitMin(arcade)} min`
-              )}
-            </span>
-            <span className="inline-flex items-center gap-1 tabular-nums">
-              <Users size={12} /> {partiesLabel(arcade.queue)}
-            </span>
-            <span className="tabular-nums">{machinesLabel(arcade)}</span>
-            <span className="tabular-nums">{arcade.distanceKm.toFixed(1)} km</span>
-          </p>
-          <p className="mt-0.5 text-[11px] text-ink-subtle">
-            {arcade.game} &middot; {freshnessLabel(arcade).toLowerCase()}
+          <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <Stat
+              label="Wait"
+              tone={estimateWaitMin(arcade) === null ? 'live' : 'ink'}
+              icon={<Clock size={13} />}
+            >
+              {estimateWaitMin(arcade) === null
+                ? 'Unavailable'
+                : `${isStale(arcade) ? '~' : ''}${estimateWaitMin(arcade)} min`}
+            </Stat>
+            <Stat label="Updated" tone={isStale(arcade) ? 'stale' : 'default'} icon={<Refresh size={12} />}>
+              {ageShort(arcade)}
+            </Stat>
+            <Stat label="Machines" icon={<Cabinet size={13} />}>
+              {workingLabel(arcade)}
+            </Stat>
+            <Stat label="Distance" icon={<Pin size={12} />}>
+              {arcade.distanceKm.toFixed(1)} km
+            </Stat>
           </p>
         </div>
         <CloseButton onClick={onClose} />
@@ -614,12 +644,12 @@ function VenueCard({ arcade, friends, onEnter, onPickFriend, onClose }) {
               {player.handle}
             </button>
           ))}
-          <span className="text-[11px] text-ink-muted">here now</span>
+          <span className="text-[11px] text-ink-muted">here</span>
         </div>
       )}
 
       <div className="mt-2.5">
-        <PrimaryButton onClick={onEnter}>Open this arcade</PrimaryButton>
+        <PrimaryButton onClick={onEnter}>Open arcade</PrimaryButton>
       </div>
     </Card>
   )
@@ -647,8 +677,8 @@ function FriendCard({
           <p className="truncate font-display text-base font-semibold text-ink">
             {player.handle}
           </p>
-          <p className="truncate text-xs text-ink-muted">
-            At {arcade?.short} for {player.sinceMin} min
+          <p className="truncate text-xs tabular-nums text-ink-muted">
+            {arcade?.short} &middot; {player.sinceMin}m
           </p>
           {/* "11th in queue can mean different things if there's five
               cabinets or two": the position always comes with its
@@ -656,7 +686,7 @@ function FriendCard({
           {queueVenue && (
             <p className="truncate text-xs tabular-nums text-ink-muted">
               {queueVenue.game}
-              {player.position ? ` · #${player.position} in the queue` : ''} &middot;{' '}
+              {player.position ? ` · #${player.position} in queue` : ''} &middot;{' '}
               {machinesLabel(queueVenue)}
             </p>
           )}
@@ -676,14 +706,14 @@ function FriendCard({
       {joined && (
         <div className="mt-2.5 flex items-center gap-2 rounded-xl bg-fresh-bg px-2.5 py-1.5">
           <p className="min-w-0 flex-1 text-[11px] font-medium text-ink">
-            {player.handle} knows you&rsquo;re on your way.
+            {player.handle} knows you&rsquo;re coming
           </p>
           <button
             type="button"
             onClick={onUndoJoin}
             className="flex-none rounded-md text-[11px] font-semibold text-ink-muted underline decoration-ink-subtle underline-offset-2 transition-colors duration-150 hover:text-ink"
           >
-            Take it back
+            Undo
           </button>
         </div>
       )}
@@ -727,7 +757,7 @@ function ZoomButton({ children, label, onClick }) {
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="flex h-9 w-9 items-center justify-center text-ink transition-colors duration-150 hover:bg-sunken active:bg-line"
+      className="flex h-11 w-11 items-center justify-center text-ink transition-colors duration-150 hover:bg-sunken active:bg-line"
     >
       {children}
     </button>

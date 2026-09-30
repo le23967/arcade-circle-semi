@@ -269,7 +269,7 @@ function Prototype({ auth, initialGame }) {
   const presenceHint = !myId
     ? null
     : mutualCount === 0
-      ? 'Arcades are shared between people who follow each other, or by anyone who has opened theirs to all followers. Follow someone who follows you to start.'
+      ? 'Follow someone who follows you back to see them here.'
       : null
   /* Whether to raise a system notification for a message that arrives
      while the app is in the background. Off until the person turns it on,
@@ -504,7 +504,7 @@ function Prototype({ auth, initialGame }) {
 
   /* "Join them" is about a person, so it asks before it acts and then says
      who was told. It never checks anyone in - that is a separate action at the
-     cabinet. */
+     machine. */
   function openJoin(handle, arcadeId) {
     if (!arcadeId) return
     setJoinTarget({ handle, arcadeId, sent: false })
@@ -739,7 +739,7 @@ function Prototype({ auth, initialGame }) {
 
   /* Joining puts you in the queue straight away.
 
-     A QR scan or NFC tap is the physical proof that you are at the cabinet,
+     A QR scan or NFC tap is the physical proof that you are at the machine,
      so it joins you on the current count with nothing to fill in (finding
      C). Nobody looked at the line, though, so the report keeps the age it
      had: a join must not make an unchecked number look freshly verified
@@ -871,11 +871,6 @@ function Prototype({ auth, initialGame }) {
         session.gameId
       )
     : null
-  /* Where you are, for the screens that mark you in a queue or count you
-     among the app check-ins. */
-  const mine = session
-    ? { arcadeId: session.arcadeId, gameId: session.gameId, position: session.position }
-    : null
   const reportVenue = reportFor
     ? venueGame(arcades.find((a) => a.id === reportFor.arcadeId), reportFor.gameId)
     : null
@@ -914,7 +909,6 @@ function Prototype({ auth, initialGame }) {
               onOpen={openArcade}
               following={followingHandles}
               favourites={favourites}
-              mine={mine}
             />
           )}
 
@@ -1028,8 +1022,7 @@ function Prototype({ auth, initialGame }) {
               handle={chat.handle}
               messages={[]}
               mode="closed"
-              subtitle="Sample player"
-              closedNote={`${chat.handle} is a sample player from the prototype, so there is nobody to write back. Messaging works between real accounts: find people under Add someone.`}
+              closedNote={`${chat.handle} can’t receive messages.`}
               onOpenProfile={() => openPlayer(chat.handle)}
               onBack={leaveToTab}
               backLabel={`Back to ${tabLabel(backTab)}`}
@@ -1408,9 +1401,9 @@ function Prototype({ auth, initialGame }) {
 
         {modal === 'checkout' && sessionArcade && (
           <QueueExitSheet
-            title={`Finished playing at ${sessionArcade.short}?`}
-            detail={`Your place goes back and everyone behind you moves up one. How long you played and how long you queued are recorded.`}
-            confirmLabel="Yes, check out"
+            title={`Finished at ${sessionArcade.short}?`}
+            detail="Frees your machine and saves the session."
+            confirmLabel="Check out"
             onCancel={() => setModal(null)}
             onConfirm={doCheckOut}
           />
@@ -1419,8 +1412,8 @@ function Prototype({ auth, initialGame }) {
         {modal === 'leavequeue' && sessionArcade && session && (
           <QueueExitSheet
             title={`Leave the queue at ${sessionArcade.short}?`}
-            detail={`You give up position #${session.position} and everyone behind you moves up one. Nothing is recorded, because you have not played.`}
-            confirmLabel="Yes, leave the queue"
+            detail={`You give up #${session.position}.`}
+            confirmLabel="Leave queue"
             onCancel={() => setModal(null)}
             onConfirm={leaveQueue}
           />

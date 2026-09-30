@@ -7,37 +7,56 @@ import {
   Info,
   Screen,
   StaleBadge,
+  Stat,
   TopBar,
+  ViewSwitch,
+  gameTint,
 } from '../components/ui.jsx'
-import { Chevron, Clock, Search, Star } from '../components/Icons.jsx'
+import {
+  Alert,
+  Cabinet,
+  Chevron,
+  Pin,
+  Refresh,
+  Search,
+  Star,
+  Users,
+} from '../components/Icons.jsx'
 import { GAMES, gameLabel } from '../data.js'
 import {
+  ageShort,
   bestArcadeId,
   estimateWaitMin,
-  freshnessLabel,
   isStale,
   isUnavailable,
-  machinesLabel,
   sortArcades,
-  sourceLabel,
+  workingCabinetsOf,
+  workingLabel,
   PAIR_TURN_MIN,
   SOLO_TURN_MIN,
   STALE_AFTER_MIN,
 } from '../lib/queue.js'
-import { issueHeadline } from '../lib/machines.js'
+import { WORKING, openIssues } from '../lib/machines.js'
 import { presentAt } from '../lib/social.js'
 
 /* Arcades is a decision screen. It brings the quickest option, travel cost
    and familiar players into one place, then lets the user compare the rest.
 
    The field study decided what a venue has to show before anyone opens it
-   (findings A, B, E). The wait stays the one big number. Beside it: the
-   distance, from an origin the screen names; how many machines are working
-   out of how many there are, because a queue means different things over
-   five cabinets or two; how old the report is and where it came from,
-   always, including when friends are there; and any machine problem. Who
-   you know there is last and smallest - it matters to some people, but
-   queue, distance and machines are what the choice usually turns on. */
+   (findings A, B, E): the wait as the one big number, then how old the
+   report is, how many machines are working out of how many, the distance,
+   and any machine problem. Who you know there is last and smallest - it
+   matters to some people, but queue, distance and machines are what the
+   choice usually turns on.
+
+   The Week 9 critique kept all of that and asked for less reading to get
+   it. Each fact is now an icon and a few characters in the same order on
+   every card - age, machines, distance, issues, people - so the eye learns
+   the row once and then only reads the numbers. The two views are named for
+   the job, Best now and Compare all, instead of Discover, which said
+   nothing about what was behind it. And the distances no longer name the
+   fixed origin the prototype measures from: to a player they are simply
+   how far away the arcade is. */
 export default function Arcades({
   arcades,
   /* Every venue, whatever game it runs, for search. */
@@ -49,14 +68,14 @@ export default function Arcades({
   onOpen,
   following,
   favourites = [],
-  /* Your own place in a queue, if any, so you count among the app
-     check-ins. */
-  mine = null,
 }) {
   const [searching, setSearching] = useState(false)
   const [query, setQuery] = useState('')
   const q = query.trim()
-  const ctx = { onOpen, following, favourites, mine }
+  const ctx = { onOpen, following, favourites }
+  /* Venues that do not run this game, named once at the foot of the list
+     rather than as a banner over it. */
+  const without = allArcades.filter((a) => !arcades.some((row) => row.id === a.id))
 
   return (
     <Screen>
@@ -79,10 +98,8 @@ export default function Arcades({
               <Search size={20} />
             </button>
             <Info>
-              Queue counts groups, not individual players. A solo turn is
-              about {SOLO_TURN_MIN} minutes (three songs) and a pair about{' '}
-              {PAIR_TURN_MIN}, then the total is shared across the working
-              machines. A machine reported out of order does not count.
+              Wait = queue &divide; working machines. Solo about {SOLO_TURN_MIN} min,
+              pair about {PAIR_TURN_MIN}. Stale after {STALE_AFTER_MIN} min.
             </Info>
           </span>
         }
@@ -99,7 +116,7 @@ export default function Arcades({
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Arcade name or suburb"
+            placeholder="Arcade or suburb"
             className="min-h-11 w-full rounded-xl border border-line-strong bg-surface px-3 text-sm text-ink outline-none placeholder:text-ink-subtle focus:border-brand-500"
           />
         </div>
@@ -107,38 +124,31 @@ export default function Arcades({
 
       <GamePicker game={game} onGame={onGame} />
 
-      <div className="flex items-center gap-2 border-b border-line bg-surface px-4 py-2">
-        <div className="flex flex-none rounded-full bg-sunken p-0.5">
-          <ModeButton on={view === 'list'} onClick={() => onView('list')}>
-            Discover
-          </ModeButton>
-          <ModeButton on={view === 'compare'} onClick={() => onView('compare')}>
-            Compare
-          </ModeButton>
-        </div>
-        {/* Said once for every distance on the screen. */}
-        <p className="ml-auto text-right text-[11px] leading-tight text-ink-subtle">
-          Distances from UTS Broadway (demo)
-        </p>
+      <div className="border-b border-line bg-surface px-4 py-2">
+        <ViewSwitch
+          label="View"
+          value={view}
+          onChange={onView}
+          options={[
+            { id: 'list', label: 'Best now' },
+            { id: 'compare', label: 'Compare all' },
+          ]}
+        />
       </div>
-
-      {arcades.length < allArcades.length && (
-        <p className="border-b border-line bg-stale-bg px-4 py-2 text-xs text-ink-muted">
-          {arcades.length} of {allArcades.length} arcades have {gameLabel(game)}.
-        </p>
-      )}
 
       {q ? (
         <SearchResults query={q} arcades={arcades} allArcades={allArcades} game={game} {...ctx} />
       ) : view === 'list' ? (
-        <DiscoverView arcades={arcades} game={game} {...ctx} />
+        <BestNowView arcades={arcades} game={game} without={without} {...ctx} />
       ) : (
-        <CompareView arcades={arcades} {...ctx} />
+        <CompareView arcades={arcades} game={game} without={without} {...ctx} />
       )}
     </Screen>
   )
 }
 
+/* The game is the filter everything else answers to, so the selected chip
+   is the one place its hue fills more than a dot. */
 function GamePicker({ game, onGame }) {
   return (
     <div className="border-b border-line bg-surface py-2">
@@ -151,21 +161,25 @@ function GamePicker({ game, onGame }) {
               type="button"
               aria-pressed={active}
               onClick={() => onGame(item.id)}
-              className={`flex flex-none snap-start items-center gap-2 rounded-xl border px-3 py-2 text-left transition-all duration-150 active:scale-95 ${
+              style={
                 active
-                  ? 'border-brand-200 bg-brand-50 shadow-sm'
-                  : 'border-line bg-surface hover:border-line-strong hover:bg-sunken'
+                  ? { borderColor: item.color, backgroundColor: gameTint(item.color, 10) }
+                  : undefined
+              }
+              className={`flex min-h-11 flex-none snap-start items-center gap-2 rounded-xl border px-3 py-1.5 text-left transition-all duration-150 active:scale-95 ${
+                active ? 'shadow-sm' : 'border-line bg-surface hover:border-line-strong hover:bg-sunken'
               }`}
             >
               <span
                 className="flex h-7 w-7 items-center justify-center rounded-lg text-[10px] font-bold text-white shadow-sm"
                 style={{ backgroundColor: item.color }}
+                aria-hidden="true"
               >
                 {item.label.slice(0, 2).toUpperCase()}
               </span>
               <span
                 className={`whitespace-nowrap text-xs font-semibold ${
-                  active ? 'text-brand-700' : 'text-ink-muted'
+                  active ? 'text-ink' : 'text-ink-muted'
                 }`}
               >
                 {item.label}
@@ -178,26 +192,53 @@ function GamePicker({ game, onGame }) {
   )
 }
 
-function ModeButton({ on, children, onClick }) {
+/* The facts behind a wait, in one fixed order so every card reads the same
+   way: how old, how many machines, how far, any reported problem, and who
+   you know there. Out of order already shows in the machine count, so only
+   the other reports count as issues here. */
+function VenueStats({ arcade, friends = [], onBrand = false, className = '' }) {
+  const working = workingCabinetsOf(arcade)
+  const warnings = openIssues(arcade).filter((i) => i.type !== 'out' && i.type !== WORKING).length
+  const tone = (semantic) => (onBrand ? 'onBrand' : semantic)
+  const machineTone = working === 0 ? 'live' : working < arcade.cabinets ? 'stale' : 'default'
+
   return (
-    <button
-      type="button"
-      aria-pressed={on}
-      onClick={onClick}
-      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-all duration-150 ${
-        on ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted hover:text-ink'
-      }`}
-    >
-      {children}
-    </button>
+    <span className={`flex flex-wrap items-center gap-x-3 gap-y-1 ${className}`}>
+      <Stat
+        label="Updated"
+        tone={tone(isStale(arcade) ? 'stale' : 'default')}
+        icon={<Refresh size={12} />}
+      >
+        {ageShort(arcade)}
+      </Stat>
+      <Stat label="Machines" tone={tone(machineTone)} icon={<Cabinet size={13} />}>
+        {workingLabel(arcade)}
+      </Stat>
+      <Stat label="Distance" tone={tone('default')} icon={<Pin size={12} />}>
+        {arcade.distanceKm.toFixed(1)} km
+      </Stat>
+      {warnings > 0 && (
+        <Stat label="Reported" tone={tone('stale')} icon={<Alert size={12} />}>
+          {warnings} {warnings === 1 ? 'issue' : 'issues'}
+        </Stat>
+      )}
+      {friends.length > 0 && (
+        <Stat label="People you follow" tone={tone('default')} icon={<Users size={13} />}>
+          {friends.length} here
+        </Stat>
+      )}
+    </span>
   )
 }
 
-/* Where you are in this venue's queue, if you are in it. */
-function mePositionAt(arcade, mine) {
-  return mine && mine.arcadeId === arcade.id && mine.gameId === arcade.gameId
-    ? mine.position
-    : null
+/* Arcades that do not run this game, said once, quietly, at the end. */
+function Without({ without, game }) {
+  if (without.length === 0) return null
+  return (
+    <p className="mt-3 px-1 text-center text-xs text-ink-subtle">
+      No {gameLabel(game)} at {without.map((a) => a.short).join(', ')}
+    </p>
+  )
 }
 
 function waitText(arcade) {
@@ -205,13 +246,15 @@ function waitText(arcade) {
   return `${isStale(arcade) ? '~' : ''}${estimateWaitMin(arcade)} min`
 }
 
-function DiscoverView({ arcades, game, onOpen, following, favourites, mine }) {
+function BestNowView({ arcades, game, without, onOpen, following, favourites }) {
   if (arcades.length === 0) {
     return (
       <Body className="flex items-center justify-center p-6 text-center">
         <div>
-          <p className="font-display text-base font-semibold text-ink">No local cabinets yet</p>
-          <p className="mt-1 text-xs text-ink-muted">Try another game to see nearby arcades.</p>
+          <p className="font-display text-base font-semibold text-ink">
+            No {gameLabel(game)} nearby
+          </p>
+          <p className="mt-1 text-xs text-ink-muted">Try another game.</p>
         </div>
       </Body>
     )
@@ -219,7 +262,7 @@ function DiscoverView({ arcades, game, onOpen, following, favourites, mine }) {
 
   const bestId = bestArcadeId(arcades)
   const best = arcades.find((a) => a.id === bestId) ?? null
-  /* The hero is the fastest, so the rest read as next fastest downward;
+  /* The hero is the fastest, so the rest read as next fastest across;
      stale reports and games with nothing working sink to the end. */
   const others = sortArcades(
     arcades.filter((a) => a.id !== bestId),
@@ -259,28 +302,16 @@ function DiscoverView({ arcades, game, onOpen, following, favourites, mine }) {
         )}
 
         {best ? (
-          <BestVenue
-            arcade={best}
-            onOpen={onOpen}
-            following={following}
-            mePosition={mePositionAt(best, mine)}
-          />
+          <BestVenue arcade={best} onOpen={onOpen} following={following} />
         ) : (
-          <NoBest game={game} />
+          <NoBest />
         )}
 
         {others.length > 0 && (
           <section className="mt-4" aria-labelledby="other-options">
-            <div className="mb-2 flex items-end justify-between px-0.5">
-              <div>
-                <h2 id="other-options" className="font-display text-sm font-semibold text-ink">
-                  {best ? 'Other options' : 'All options'}
-                </h2>
-                <p className="text-[11px] text-ink-muted">
-                  Swipe across, then open one to check the full queue.
-                </p>
-              </div>
-            </div>
+            <h2 id="other-options" className="mb-2 px-0.5 font-display text-sm font-semibold text-ink">
+              {best ? 'Next fastest' : 'All arcades'}
+            </h2>
 
             <div className="no-scrollbar -mx-3 flex snap-x gap-2.5 overflow-x-auto px-3 pb-1">
               {others.map((arcade) => (
@@ -290,12 +321,13 @@ function DiscoverView({ arcades, game, onOpen, following, favourites, mine }) {
                   onOpen={onOpen}
                   following={following}
                   favourite={favourites.includes(arcade.id)}
-                  mePosition={mePositionAt(arcade, mine)}
                 />
               ))}
             </div>
           </section>
         )}
+
+        <Without without={without} game={game} />
       </div>
     </Body>
   )
@@ -304,25 +336,23 @@ function DiscoverView({ arcades, game, onOpen, following, favourites, mine }) {
 /* Nothing qualifies: every report is stale, or the one current venue has no
    working machine. Crowning one of them anyway would put "Fastest now" on
    a number nobody can vouch for. */
-function NoBest({ game }) {
+function NoBest() {
   return (
-    <div role="status" className="rounded-3xl border border-line bg-surface p-4 shadow-sm">
-      <p className="font-display text-base font-semibold text-ink">
-        No confirmed fastest option right now
-      </p>
-      <p className="mt-1 text-xs leading-relaxed text-ink-muted">
-        Every {gameLabel(game)} report here is older than {STALE_AFTER_MIN} minutes
-        or has no working machine. The venues are still listed below; check one
-        before you travel.
-      </p>
+    <div role="status" className="flex items-start gap-3 rounded-3xl border border-line bg-surface p-4 shadow-sm">
+      <span className="mt-0.5 flex-none text-stale">
+        <Alert size={20} />
+      </span>
+      <div>
+        <p className="font-display text-base font-semibold text-ink">No confirmed fastest</p>
+        <p className="mt-0.5 text-xs text-ink-muted">Reports are stale or machines are down.</p>
+      </div>
     </div>
   )
 }
 
-function BestVenue({ arcade, onOpen, following, mePosition }) {
+function BestVenue({ arcade, onOpen, following }) {
   const wait = estimateWaitMin(arcade)
   const friends = presentAt(arcade.id, following)
-  const issue = issueHeadline(arcade)
 
   return (
     <button
@@ -345,73 +375,61 @@ function BestVenue({ arcade, onOpen, following, mePosition }) {
           <span className="mt-3 block max-w-[220px] font-display text-xl font-bold leading-tight">
             {arcade.name}
           </span>
-          <span className="mt-1 block text-xs text-white/80">
-            {arcade.game} &middot;{' '}
-            <span className="tabular-nums">
-              {arcade.distanceKm.toFixed(1)} km &middot; {machinesLabel(arcade)}
-            </span>
-          </span>
-          {issue && (
-            <span className="mt-1 flex items-center gap-1.5 text-[11px] text-white/85">
-              <span className="h-1.5 w-1.5 flex-none rounded-full bg-amber-300" />
-              <span className="truncate">{issue}</span>
-            </span>
-          )}
-          {friends.length > 0 && (
-            <span className="mt-1.5 flex items-center gap-1.5">
-              <span className="flex -space-x-1">
-                {friends.slice(0, 3).map((friend) => (
-                  <Avatar
-                    key={friend.handle}
-                    handle={friend.handle}
-                    size={20}
-                    className="ring-2 ring-brand-600"
-                  />
-                ))}
-              </span>
-              <span className="truncate text-[11px] text-white/75">
-                {friends.map((friend) => friend.handle).join(', ')} here now
-              </span>
-            </span>
-          )}
         </span>
 
-        <span className="flex h-20 w-20 flex-none flex-col items-center justify-center rounded-full border border-white/20 bg-white/10 shadow-inner backdrop-blur">
-          <span className="font-display text-2xl font-bold tabular-nums">{wait}</span>
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-white/75">
+        {/* The one accent the game's hue gets on the hero: the ring round
+            the number it is about. */}
+        <span
+          className="flex h-20 w-20 flex-none flex-col items-center justify-center rounded-full border-2 bg-white/10 shadow-inner backdrop-blur"
+          style={{ borderColor: `color-mix(in srgb, ${arcade.gameColor} 70%, white)` }}
+        >
+          <span className="font-display text-3xl font-bold leading-none tabular-nums">{wait}</span>
+          <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/80">
             min wait
           </span>
         </span>
       </span>
 
-      {/* The report's age stays on the hero whoever is there; it used to give
-          way to friends' names, which hid it exactly when it mattered. */}
-      <span className="relative mt-4 flex items-center justify-between rounded-2xl bg-white/10 px-3 py-2.5">
-        <span className="flex min-w-0 items-center gap-2">
-          <Clock size={16} />
-          <span className="truncate text-xs font-medium text-white/90">
-            {freshnessLabel(arcade)} &middot; {sourceLabel(arcade, mePosition)}
+      <VenueStats arcade={arcade} onBrand className="relative mt-3" />
+
+      <span className="relative mt-3 flex items-center justify-between gap-2">
+        {friends.length > 0 ? (
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="flex -space-x-1">
+              {friends.slice(0, 3).map((friend) => (
+                <Avatar
+                  key={friend.handle}
+                  handle={friend.handle}
+                  size={22}
+                  className="ring-2 ring-brand-600"
+                />
+              ))}
+            </span>
+            <span className="truncate text-xs text-white/85">
+              {friends.map((friend) => friend.handle).join(', ')}
+            </span>
           </span>
-        </span>
-        <span className="ml-2 inline-flex flex-none items-center gap-1 text-xs font-bold">
-          Open <Chevron size={14} />
+        ) : (
+          <span />
+        )}
+        <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white/15" aria-hidden="true">
+          <Chevron size={16} />
         </span>
       </span>
     </button>
   )
 }
 
-function VenueCard({ arcade, onOpen, following, favourite, mePosition }) {
+function VenueCard({ arcade, onOpen, following, favourite }) {
   const stale = isStale(arcade)
   const unavailable = isUnavailable(arcade)
   const friends = presentAt(arcade.id, following)
-  const issue = issueHeadline(arcade)
 
   return (
     <button
       type="button"
       onClick={() => onOpen(arcade.id)}
-      className="w-[216px] flex-none snap-start rounded-2xl border border-line bg-surface p-3 text-left shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-md active:translate-y-0"
+      className="w-[200px] flex-none snap-start rounded-2xl border border-line bg-surface p-3 text-left shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-md active:translate-y-0"
     >
       <span className="flex items-center gap-2">
         <GameDot color={arcade.gameColor} className="h-2.5 w-2.5" />
@@ -427,124 +445,64 @@ function VenueCard({ arcade, onOpen, following, favourite, mePosition }) {
         {stale && !unavailable && <StaleBadge />}
       </span>
 
-      <span className="mt-2 flex items-end justify-between gap-2">
-        <span className="min-w-0 text-[11px] text-ink-muted">
-          <span className="block tabular-nums">{arcade.distanceKm.toFixed(1)} km</span>
-          <span className={`block tabular-nums ${unavailable ? 'text-live' : ''}`}>
-            {machinesLabel(arcade)}
-          </span>
-        </span>
+      <span className="mt-2 block">
         <WaitNumber arcade={arcade} />
       </span>
 
-      <span className="mt-1.5 block text-[11px] leading-snug tabular-nums text-ink-muted">
-        {freshnessLabel(arcade)} &middot; {sourceLabel(arcade, mePosition)}
-      </span>
-
-      {(issue || unavailable) && (
-        <IssueLine unavailable={unavailable}>{unavailable ? 'No working machines' : issue}</IssueLine>
-      )}
-
-      {friends.length > 0 && (
-        <span className="mt-1.5 flex items-center gap-1.5">
-          <span className="flex -space-x-1.5">
-            {friends.slice(0, 3).map((friend) => (
-              <Avatar key={friend.handle} handle={friend.handle} size={16} />
-            ))}
-          </span>
-          <span className="text-[11px] text-ink-muted">{friends.length} here</span>
-        </span>
-      )}
+      <VenueStats arcade={arcade} friends={friends} className="mt-2" />
     </button>
   )
 }
 
 /* The wait, or the reason there is none. */
-function WaitNumber({ arcade }) {
+function WaitNumber({ arcade, align = 'left' }) {
+  const right = align === 'right' ? 'text-right' : ''
   if (isUnavailable(arcade)) {
     return (
-      <span className="flex-none text-right">
-        <span className="block font-display text-2xl font-bold leading-none text-live">&mdash;</span>
-        <span className="whitespace-nowrap text-[9px] font-semibold uppercase tracking-wide text-live">
-          Unavailable
-        </span>
+      <span className={`block ${right}`}>
+        <span className="font-display text-xl font-bold leading-none text-live">Unavailable</span>
       </span>
     )
   }
   return (
-    <span className="flex-none text-right">
-      <span className="block font-display text-2xl font-bold leading-none tabular-nums text-ink">
+    <span className={`block whitespace-nowrap leading-none ${right}`}>
+      <span className="font-display text-3xl font-bold tabular-nums text-ink">
         {isStale(arcade) ? '~' : ''}
         {estimateWaitMin(arcade)}
       </span>
-      <span className="whitespace-nowrap text-[9px] uppercase tracking-wide text-ink-subtle">
-        min wait
-      </span>
+      <span className="ml-1 text-xs font-semibold text-ink-muted">min</span>
     </span>
   )
 }
 
-function IssueLine({ unavailable, children }) {
-  return (
-    <span
-      className={`mt-1 flex items-center gap-1.5 text-[11px] ${
-        unavailable ? 'font-semibold text-live' : 'text-stale'
-      }`}
-    >
-      <span
-        className={`h-1.5 w-1.5 flex-none rounded-full ${unavailable ? 'bg-live' : 'bg-stale'}`}
-      />
-      <span className="truncate">{children}</span>
-    </span>
-  )
-}
-
-function CompareView({ arcades, onOpen, following, favourites, mine }) {
+function CompareView({ arcades, game, without, onOpen, following, favourites }) {
   const bestId = bestArcadeId(arcades)
   const rows = sortArcades(arcades, 'wait')
 
   return (
     <Body className="bg-page/70 p-3">
-      <section className="rounded-2xl border border-line bg-surface p-3 shadow-sm">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="font-display text-sm font-semibold text-ink">Time against travel</h2>
-            <p className="mt-0.5 text-[11px] leading-snug text-ink-muted">
-              A longer trip may still get you playing sooner.
-            </p>
-          </div>
-          <Info>
-            More working machines move several groups at once, so a busy
-            arcade can still be the quicker choice. Reports older than{' '}
-            {STALE_AFTER_MIN} minutes, and games with no working machine, stay
-            visible but cannot be the best option, so check one before
-            travelling.
-          </Info>
-        </div>
-
-        <div className="mt-3 space-y-2.5">
-          {rows.map((arcade) => (
-            <CompareCard
-              key={arcade.id}
-              arcade={arcade}
-              best={arcade.id === bestId}
-              onOpen={onOpen}
-              following={following}
-              favourite={favourites.includes(arcade.id)}
-              mePosition={mePositionAt(arcade, mine)}
-            />
-          ))}
-        </div>
-      </section>
+      <div className="space-y-2">
+        {rows.map((arcade) => (
+          <CompareCard
+            key={arcade.id}
+            arcade={arcade}
+            best={arcade.id === bestId}
+            onOpen={onOpen}
+            following={following}
+            favourite={favourites.includes(arcade.id)}
+          />
+        ))}
+      </div>
+      <Without without={without} game={game} />
     </Body>
   )
 }
 
-/* Venue search: name, short name or suburb, over the venues the prototype
-   actually has. Three venues is all it covers, so a search for anywhere
-   else says that rather than pretending the place has no arcades. Results
-   keep the real ranking - Best stays on whichever venue is fastest overall. */
-function SearchResults({ query, arcades, allArcades, game, onOpen, following, favourites, mine }) {
+/* Venue search: name, short name or suburb, over the venues the app
+   covers. A search for anywhere else suggests the ones it has rather than
+   pretending the place has no arcades. Results keep the real ranking - Best
+   stays on whichever venue is fastest overall. */
+function SearchResults({ query, arcades, allArcades, game, onOpen, following, favourites }) {
   const needle = query.toLowerCase()
   const matches = (a) =>
     [a.name, a.short, a.suburb].some((field) => field?.toLowerCase().includes(needle))
@@ -557,7 +515,7 @@ function SearchResults({ query, arcades, allArcades, game, onOpen, following, fa
   return (
     <Body className="bg-page/70 p-3">
       {rows.length > 0 ? (
-        <div className="space-y-2.5">
+        <div className="space-y-2">
           {rows.map((arcade) => (
             <CompareCard
               key={arcade.id}
@@ -566,7 +524,6 @@ function SearchResults({ query, arcades, allArcades, game, onOpen, following, fa
               onOpen={onOpen}
               following={following}
               favourite={favourites.includes(arcade.id)}
-              mePosition={mePositionAt(arcade, mine)}
             />
           ))}
         </div>
@@ -575,31 +532,22 @@ function SearchResults({ query, arcades, allArcades, game, onOpen, following, fa
           <p className="font-display text-sm font-semibold text-ink">
             No {gameLabel(game)} arcade matches &ldquo;{query}&rdquo;
           </p>
-          <p className="mt-1 text-xs leading-relaxed text-ink-muted">
-            This prototype covers three Sydney CBD venues: Timezone Central
-            Park, Timezone Haymarket and KOKO Amusement Town Hall.
+          <p className="mt-1 text-xs text-ink-muted">
+            Try {allArcades.map((a) => a.short).join(', ')}
           </p>
         </div>
       )}
-      {withoutGame.length > 0 && (
-        <p className="mt-2.5 px-1 text-xs text-ink-muted">
-          {withoutGame.map((a) => a.name).join(', ')}{' '}
-          {withoutGame.length === 1 ? 'does' : 'do'} not have {gameLabel(game)}.
-        </p>
-      )}
+      <Without without={withoutGame} game={game} />
     </Body>
   )
 }
 
-/* Enough to choose without opening anything. The field study reversed the
-   earlier call to keep cabinet counts and report ages a level down, on the
-   detail screen: people judged a queue by the machines behind it and by
-   how old the number was, so both are here, on two short lines. */
-function CompareCard({ arcade, best, onOpen, following, favourite, mePosition }) {
+/* Enough to choose without opening anything: the wait on the right, the
+   facts behind it on one wrapping row of chips. */
+function CompareCard({ arcade, best, onOpen, following, favourite }) {
   const stale = isStale(arcade)
   const unavailable = isUnavailable(arcade)
   const friends = presentAt(arcade.id, following)
-  const issue = issueHeadline(arcade)
 
   return (
     <button
@@ -616,34 +564,21 @@ function CompareCard({ arcade, best, onOpen, following, favourite, mePosition })
             {arcade.short}
           </span>
           {favourite && (
-          <span className="flex-none text-brand-600">
-            <Star size={14} filled />
-            <span className="sr-only">Favourite</span>
-          </span>
-        )}
+            <span className="flex-none text-brand-600">
+              <Star size={14} filled />
+              <span className="sr-only">Favourite</span>
+            </span>
+          )}
           {best && <BestBadge />}
           {stale && !unavailable && <StaleBadge />}
         </span>
-        <span className="mt-1 block text-[11px] tabular-nums text-ink-muted">
-          {arcade.distanceKm.toFixed(1)} km &middot;{' '}
-          <span className={unavailable ? 'text-live' : ''}>{machinesLabel(arcade)}</span>
-          {friends.length > 0 && (
-            <>
-              {' · '}
-              {friends.length} {friends.length === 1 ? 'friend' : 'friends'} here
-            </>
-          )}
-        </span>
-        <span className="block truncate text-[11px] tabular-nums text-ink-muted">
-          {freshnessLabel(arcade)} &middot; {sourceLabel(arcade, mePosition)}
-        </span>
-        {(issue || unavailable) && (
-        <IssueLine unavailable={unavailable}>{unavailable ? 'No working machines' : issue}</IssueLine>
-      )}
+        <VenueStats arcade={arcade} friends={friends} className="mt-1.5" />
       </span>
 
-      <WaitNumber arcade={arcade} />
-      <Chevron size={16} />
+      <WaitNumber arcade={arcade} align="right" />
+      <span className="text-ink-subtle">
+        <Chevron size={16} />
+      </span>
     </button>
   )
 }

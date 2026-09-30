@@ -149,11 +149,13 @@ export default function Message({
             Loading messages…
           </p>
         ) : messages.length === 0 ? (
-          <p className="py-6 text-center text-xs text-ink-subtle">
-            {mode === 'request-compose'
-              ? `You don’t follow each other yet, so your first message reaches ${handle} as a request.`
-              : 'No messages yet. Anything you send stays here.'}
-          </p>
+          mode === 'closed' ? null : (
+            <p className="py-6 text-center text-xs text-ink-subtle">
+              {mode === 'request-compose'
+                ? `Your first message reaches ${handle} as a request.`
+                : 'No messages yet'}
+            </p>
+          )
         ) : (
           <ul className="space-y-2">
             {messages.map((m) => (

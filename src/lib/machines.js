@@ -12,7 +12,7 @@
 
      { id, type, cabinet, note, minsAgo }
 
-   `cabinet` is an optional label such as "Cab 2", `note` an optional short
+   `cabinet` is an optional label such as "Machine 2", `note` an optional short
    comment, `minsAgo` its age. Only "Out of order" takes a machine away; the
    other types are warnings that inform the choice without changing
    capacity. "Working normally" is the positive case - a cabinet that had a
@@ -43,8 +43,10 @@ export function issueLabel(type) {
   return ISSUE_TYPES.find((t) => t.id === type)?.label ?? 'Other'
 }
 
+/* Shown to players, so they say "Machine": not everyone who opens the app
+   plays enough to call it a cabinet. */
 export function cabinetLabels(total) {
-  return Array.from({ length: Math.max(0, total) }, (_, i) => `Cab ${i + 1}`)
+  return Array.from({ length: Math.max(0, total) }, (_, i) => `Machine ${i + 1}`)
 }
 
 export function issuesOf(a) {
@@ -122,7 +124,7 @@ export function ageLabel(min) {
   return `${hours} h ago`
 }
 
-/* "Cab 3 · Controls (buttons/touch)", the one line a row has room for. */
+/* "Machine 3 · Controls (buttons/touch)", the one line a row has room for. */
 export function noteTitle(issue) {
   const label = issueLabel(issue.type)
   return issue.cabinet ? `${issue.cabinet} · ${label}` : label

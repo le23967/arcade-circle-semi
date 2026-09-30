@@ -35,7 +35,7 @@ export function TopBar({
           type="button"
           onClick={onBack}
           aria-label={backLabel}
-          className="-ml-2 rounded-full p-1.5 text-ink transition-colors duration-150 hover:bg-sunken active:bg-line"
+          className="-my-1.5 -ml-3 flex h-11 w-11 flex-none items-center justify-center rounded-full text-ink transition-colors duration-150 hover:bg-sunken active:bg-line"
         >
           <BackGlyph />
         </button>
@@ -222,6 +222,41 @@ export function clipArt(clip) {
   ].join(', ')
 }
 
+/* One fact at a glance: an icon, a number or two words, and a name for
+   assistive technology, since "5/5 working" beside a drawing of a machine is
+   obvious to the eye and not to a screen reader. Tone carries the state, and
+   the words always say it too, so nothing rests on colour alone. */
+const STAT_TONES = {
+  default: ['text-ink-muted', 'bg-sunken'],
+  ink: ['text-ink', 'bg-sunken'],
+  fresh: ['text-fresh', 'bg-fresh-bg'],
+  stale: ['text-stale', 'bg-stale-bg'],
+  live: ['text-live', 'bg-live-bg'],
+  /* On the brand hero, where the semantic hues would lose contrast. */
+  onBrand: ['text-white/90', 'bg-white/15'],
+}
+
+export function Stat({ icon, label, tone = 'default', pill = false, className = '', children }) {
+  const [fg, bg] = STAT_TONES[tone] ?? STAT_TONES.default
+  return (
+    <span
+      className={`inline-flex items-center gap-1 whitespace-nowrap text-xs font-medium tabular-nums ${fg} ${
+        pill ? `rounded-full px-2.5 py-1 ${bg}` : ''
+      } ${className}`}
+    >
+      {icon}
+      {label && <span className="sr-only">{label}: </span>}
+      {children}
+    </span>
+  )
+}
+
+/* A game's hue mixed into the surface, for the few places it is allowed to
+   be more than a dot: the selected game chip and the accent on a hero. */
+export function gameTint(color, percent = 10) {
+  return `color-mix(in srgb, ${color} ${percent}%, var(--surface))`
+}
+
 /* A dot in the game's hue. Cheap, and it makes a list of venues scannable
    before any label is read. */
 export function GameDot({ color, className = '' }) {
@@ -389,7 +424,9 @@ export function Info({ children, label = 'More information', above = false }) {
         onClick={() => setOpen((o) => !o)}
         onFocus={show}
         onBlur={hideSoon}
-        className={`flex h-[17px] w-[17px] flex-none items-center justify-center rounded-full border text-[10px] font-bold leading-none transition-colors duration-150 ${
+        /* Drawn at 17px so it stays quiet, pressed at 44: the pseudo
+           element widens the hit area without moving anything. */
+        className={`relative flex h-[17px] w-[17px] flex-none items-center justify-center rounded-full border text-[10px] font-bold leading-none transition-colors duration-150 before:absolute before:-inset-[13px] before:content-[''] ${
           open
             ? 'border-brand-600 bg-brand-600 text-white'
             : 'border-line-strong bg-surface text-ink-muted hover:border-brand-400 hover:text-brand-600'
@@ -399,6 +436,36 @@ export function Info({ children, label = 'More information', above = false }) {
       </button>
       {tooltip}
     </span>
+  )
+}
+
+/* Two views of the same thing, as one control: the main switch on a tab.
+   Equal widths, so neither option reads as the default by being bigger. */
+export function ViewSwitch({ label, options, value, onChange, className = '' }) {
+  return (
+    <div
+      role="group"
+      aria-label={label}
+      className={`grid rounded-full bg-sunken p-0.5 ${className}`}
+      style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
+    >
+      {options.map((option) => {
+        const on = option.id === value
+        return (
+          <button
+            key={option.id}
+            type="button"
+            aria-pressed={on}
+            onClick={() => onChange(option.id)}
+            className={`min-h-10 whitespace-nowrap rounded-full px-3 text-xs font-semibold transition-all duration-150 ease-soft ${
+              on ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted hover:text-ink'
+            }`}
+          >
+            {option.label}
+          </button>
+        )
+      })}
+    </div>
   )
 }
 

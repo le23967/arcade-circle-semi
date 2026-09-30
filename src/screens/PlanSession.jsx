@@ -270,12 +270,7 @@ export default function PlanSession({
             {arcade?.short} &middot; {formatWhen(when, now)}
           </p>
           <p className="mt-1 text-xs text-ink-subtle">
-            {open && (
-              <>
-                Anyone on the app can see it on Open and say they&rsquo;re in.{' '}
-              </>
-            )}
-            You can change or call it off from Later.
+            {open ? 'Open to anyone · ' : ''}Change it any time in Plans
           </p>
 
           {/* Who it actually reached. A message is the only thing that
@@ -283,12 +278,8 @@ export default function PlanSession({
           {(reached.length > 0 || failed.length > 0 || samples.length > 0) && (
             <div className="mt-4 w-full rounded-xl border border-line bg-sunken px-3 py-2.5 text-left text-xs leading-relaxed text-ink-muted">
               {reached.length > 0 && (
-                <p>
-                  <span className="font-semibold text-ink">
-                    Sent to {reached.map((d) => d.handle).join(', ')}
-                  </span>{' '}
-                  as a message{editing ? ', with the change' : ''}. Anyone who
-                  doesn&rsquo;t follow you back gets it as a request.
+                <p className="font-semibold text-ink">
+                  Sent to {reached.map((d) => d.handle).join(', ')}
                 </p>
               )}
               {failed.map((d) => (
@@ -297,10 +288,7 @@ export default function PlanSession({
                 </p>
               ))}
               {samples.length > 0 && (
-                <p className="mt-1">
-                  {samples.join(', ')} {samples.length === 1 ? 'is a sample player' : 'are sample players'} from
-                  the prototype, so nothing was sent there.
-                </p>
+                <p className="mt-1">Not sent to {samples.join(', ')}</p>
               )}
             </div>
           )}
@@ -316,11 +304,6 @@ export default function PlanSession({
     <Screen>
       <TopBar
         title={editing ? 'Change the session' : 'Plan a session'}
-        subtitle={
-          editing
-            ? 'Move it, or change who can come'
-            : "Turn who's around into a time and a place"
-        }
         onBack={onBack}
       />
 
@@ -375,7 +358,7 @@ export default function PlanSession({
 
           <div className="mb-1.5 mt-3 flex items-center gap-2">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
-              Or use a suggestion
+              Quick picks
             </p>
             <span className="h-px flex-1 bg-line" />
           </div>
@@ -401,11 +384,6 @@ export default function PlanSession({
               Anyone on the app
             </Seg>
           </div>
-          <p className="mt-2 text-xs leading-relaxed text-ink-muted">
-            {open
-              ? 'Posted on Open, where anyone can see it and say they\u2019re in, including people you have never met. You can still ask people directly as well.'
-              : 'Only the people you ask below can see it.'}
-          </p>
         </Section>
 
         <Section title="Note, optional">
@@ -489,7 +467,7 @@ export default function PlanSession({
           )}
           {trimmed === '' && myId && following.length === 0 && (
             <p className="mt-2 text-xs leading-relaxed text-ink-muted">
-              You don&rsquo;t follow anyone yet. Search a username to ask someone.
+              Search a username to ask someone.
             </p>
           )}
           {trimmed === '' && !myId && (

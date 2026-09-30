@@ -128,6 +128,12 @@ export function machinesLabel(a) {
   return working === total ? `${total}/${total} ${noun}` : `${working}/${total} ${noun} working`
 }
 
+/* "4/5 working", the form a status chip uses. The chip carries a machine
+   icon and an accessible name, so the noun can go. */
+export function workingLabel(a) {
+  return `${workingCabinetsOf(a)}/${Math.max(0, a.cabinets ?? 0)} working`
+}
+
 /* Minutes, or null when no machine is working: there is no honest finite
    number to show then, and every caller has to say "unavailable" instead. */
 export function estimateWaitMin(a) {
@@ -145,6 +151,16 @@ export function freshnessLabel(a) {
   if (a.updatedMinsAgo <= 0) return 'Updated just now'
   if (a.updatedMinsAgo === 1) return 'Updated 1 min ago'
   return `Updated ${a.updatedMinsAgo} min ago`
+}
+
+/* The report's age in the fewest characters that still read as a time:
+   "6m ago", "1h ago". Used where it sits beside the wait it qualifies and
+   a whole sentence would compete with the number. */
+export function ageShort(a) {
+  const m = a.updatedMinsAgo
+  if (m <= 0) return 'just now'
+  if (m < 60) return `${m}m ago`
+  return `${Math.round(m / 60)}h ago`
 }
 
 /* Where the number came from, as far as the app knows it: how many of the

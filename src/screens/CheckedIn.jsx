@@ -5,9 +5,20 @@ import {
   PrimaryButton,
   SecondaryButton,
   Toggle,
-  Info,
+  Stat,
+  GameDot,
+  LiveBadge,
 } from '../components/ui.jsx'
-import { CheckCircle, Chevron, Play } from '../components/Icons.jsx'
+import {
+  Cabinet,
+  CheckCircle,
+  Chevron,
+  Clock,
+  Play,
+  Shield,
+  User,
+  Users,
+} from '../components/Icons.jsx'
 import { turnState, workingCabinetsOf } from '../lib/queue.js'
 
 /* SCREEN 6 - In the queue.
@@ -19,7 +30,7 @@ import { turnState, workingCabinetsOf } from '../lib/queue.js'
    "people, like, just come up and they're like, who's next?" ... "they weren't
    sure" ... "it's very messy, especially when it gets busy." Second, players
    do not stand and watch - they are "scrolling phones and they're not paying
-   attention", or they walk off to another cabinet entirely: "if they're about
+   attention", or they walk off to another machine entirely: "if they're about
    to have a queue, they'll go and play Mame ... while they wait."
 
    An explicit position plus a one-turn warning answers both: the order is
@@ -56,23 +67,12 @@ export default function CheckedIn({
   onCheckOut,
   onLeaveQueue,
 }) {
-  /* Nothing has been played until a working cabinet is free for you, so up
+  /* Nothing has been played until a working machine is free for you, so up
      to that point checking out is the wrong exit: it would record a session
      that never happened. */
   const working = workingCabinetsOf(arcade)
   const playing = turnUp || position <= working
   const youState = turnUp && position > working ? 'Your turn' : turnState(position, working)
-
-  const who = [
-    party === 'pair' ? 'With a partner' : party === 'solo' ? 'Solo' : null,
-    !audienceLabel
-      ? null
-      : shared
-        ? `Visible to ${audienceLabel}`
-        : 'Not shared, you count as a guest',
-  ]
-    .filter(Boolean)
-    .join(' · ')
 
   return (
     <Screen>
@@ -85,68 +85,83 @@ export default function CheckedIn({
       />
 
       <Body>
-        <div className="flex items-center gap-3 border-b border-line px-4 py-5">
-          <span className="text-ink">
-            <CheckCircle size={40} />
-          </span>
-          <div className="min-w-0">
-            <p className="text-lg font-semibold text-ink">
-              {playing ? 'It’s your turn' : 'You’re in the queue'}
+        {/* The position is the answer; everything else on this block is a
+            chip that qualifies it. The explanations it used to carry - what
+            the estimate is across, what the exits do - are either on the
+            chips or on the sheet each exit opens. */}
+        <section aria-label="Your place" className="border-b border-line px-4 py-5">
+          <div className="flex items-center justify-between gap-2">
+            <p className="flex min-w-0 items-center gap-2 text-sm font-semibold text-ink">
+              <GameDot color={arcade.gameColor} className="h-2.5 w-2.5" />
+              <span className="truncate">
+                {arcade.short} &middot; {arcade.game}
+              </span>
             </p>
-            <p className="text-sm text-ink-muted">
-              {arcade.game} at {arcade.name}
-            </p>
-            {who && <p className="mt-0.5 text-xs text-ink-muted">{who}</p>}
+            {playing ? (
+              <LiveBadge label="Your turn" />
+            ) : (
+              <span className="inline-flex flex-none items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-700">
+                <CheckCircle size={12} />
+                In queue
+              </span>
+            )}
           </div>
-        </div>
 
-        <div className="border-b border-line px-4 py-4">
-          <p className="text-xs uppercase tracking-wide text-ink-muted">
-            Your position
-          </p>
-          <p className="text-3xl font-semibold tabular-nums text-ink">
-            #{position}{' '}
-            <span className="text-base font-normal text-ink-muted">
-              of {total} parties
+          <p className="mt-4 font-display leading-none text-ink">
+            <span className="sr-only">Position </span>
+            <span className="text-6xl font-bold tabular-nums tracking-tight">#{position}</span>
+            <span className="ml-2 text-xl font-semibold tabular-nums text-ink-muted">
+              of {total}
             </span>
           </p>
-          <p className="mt-1 text-xs text-ink-muted">
-            {playing
-              ? 'A machine is yours. Check out when you finish playing.'
-              : working === 0
-                ? `No ${arcade.game} machine is working here right now, so there is no estimate. You keep your place.`
-                : `Roughly ${aheadMin} min out, across ${working} of ${arcade.cabinets} working ${
-                    arcade.cabinets === 1 ? 'machine' : 'machines'
-                  }.`}
-          </p>
+
+          <div className="mt-4 flex flex-wrap items-center gap-1.5">
+            {!playing && (
+              <Stat
+                pill
+                tone={working === 0 ? 'live' : 'ink'}
+                label="Time to your turn"
+                icon={<Clock size={13} />}
+              >
+                {working === 0 ? 'No estimate' : `~${aheadMin} min`}
+              </Stat>
+            )}
+            <Stat pill tone={working === 0 ? 'live' : 'default'} label="Machines" icon={<Cabinet size={14} />}>
+              {working}/{arcade.cabinets} working
+            </Stat>
+            {party && (
+              <Stat pill label="Playing" icon={party === 'pair' ? <Users size={13} /> : <User size={13} />}>
+                {party === 'pair' ? 'Pair' : 'Solo'}
+              </Stat>
+            )}
+            {audienceLabel && (
+              <Stat pill label="Check-in" icon={<Shield size={13} />}>
+                {shared ? 'Shared' : 'Not shared'}
+              </Stat>
+            )}
+          </div>
+
           {/* The count a scan joined on is whatever was last reported, so
               checking it is offered here - after you are in, never before. */}
           {onUpdateCount && (
-            <div className="mt-1 flex flex-wrap items-center gap-x-1 text-xs text-ink-muted">
-              Queue count looks wrong?
-              <button
-                type="button"
-                onClick={onUpdateCount}
-                className="min-h-11 rounded-md px-1 font-semibold text-brand-600"
-              >
-                Update count
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={onUpdateCount}
+              className="-ml-1 mt-2 min-h-11 rounded-md px-1 text-xs font-semibold text-brand-600"
+            >
+              Update count
+            </button>
           )}
-        </div>
+        </section>
 
         <div className="border-b border-line">
-          <p className="flex items-center gap-1.5 px-4 pt-3 text-xs uppercase tracking-wide text-ink-muted">
+          <p className="px-4 pt-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
             Running order
-            <Info>
-              Updates as people check in and out, so nobody has to ask who is
-              next.
-            </Info>
           </p>
-          {/* State comes from the venue's working cabinets, not from a fixed
+          {/* State comes from the venue's working machines, not from a fixed
               label: at a two-machine venue only the first two are playing,
               whatever your position happens to be. */}
-          <ol>
+          <ol className="mt-2">
             {queueAhead.map((p, i) => {
               const n = position - queueAhead.length + i
               if (n < 1) return null
@@ -164,12 +179,7 @@ export default function CheckedIn({
         </div>
 
         <div className="space-y-2 p-4">
-          <Toggle
-            checked={notify}
-            onChange={onNotify}
-            label="Notify me when I'm one turn away"
-            hint="Go play something else, you'll get pulled back in time."
-          />
+          <Toggle checked={notify} onChange={onNotify} label="Alert me one turn before" />
           {/* Waiting is phone time for most players, so the clips live here,
               where the turn alert can still pull you back to this screen. */}
           {!playing && onWatch && (
@@ -181,13 +191,8 @@ export default function CheckedIn({
               <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-sunken text-ink-muted">
                 <Play size={16} />
               </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium text-ink">
-                  Watch clips while you wait
-                </span>
-                <span className="block text-xs text-ink-muted">
-                  The turn alert pulls you back when you&rsquo;re up.
-                </span>
+              <span className="min-w-0 flex-1 text-sm font-medium text-ink">
+                Watch clips while you wait
               </span>
               <Chevron size={16} />
             </button>
@@ -195,21 +200,13 @@ export default function CheckedIn({
         </div>
       </Body>
 
-      <div className="space-y-1.5 border-t border-line p-4">
+      {/* One exit at a time, and each asks first on a sheet that says what
+          it does, so the button needs no caption. */}
+      <div className="border-t border-line p-4">
         {playing ? (
-          <>
-            <PrimaryButton onClick={onCheckOut}>Check out</PrimaryButton>
-            <p className="text-center text-[11px] text-ink-muted">
-              Finished playing? Checking out frees your machine.
-            </p>
-          </>
+          <PrimaryButton onClick={onCheckOut}>Check out</PrimaryButton>
         ) : (
-          <>
-            <SecondaryButton onClick={onLeaveQueue}>Leave queue</SecondaryButton>
-            <p className="text-center text-[11px] text-ink-muted">
-              Not playing after all? Your place goes to the next party.
-            </p>
-          </>
+          <SecondaryButton onClick={onLeaveQueue}>Leave queue</SecondaryButton>
         )}
       </div>
     </Screen>
@@ -220,7 +217,7 @@ function Row({ n, name, state, you }) {
   return (
     <li
       className={`flex items-center gap-3 border-t border-line px-4 py-2 ${
-        you ? 'bg-sunken' : ''
+        you ? 'bg-brand-50' : ''
       }`}
     >
       <span className="w-5 text-xs tabular-nums text-ink-muted">{n}</span>
