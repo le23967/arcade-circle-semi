@@ -75,8 +75,6 @@ export default function Friends({
      you when signed in, sample players when not. Everything here that
      draws people reads this. */
   present = [],
-  /* Why the map might be empty, in one line, or null. */
-  presenceHint = null,
   joinsSent,
   planned,
   rsvps,
@@ -179,7 +177,6 @@ export default function Friends({
           onGame={onGame}
           following={following}
           present={present}
-          presenceHint={presenceHint}
           venueId={hereVenueId}
           joinsSent={joinsSent}
           onClearVenue={onClearVenue}
@@ -256,7 +253,7 @@ function QuietTab({ on, onClick, icon, children }) {
    sheet is already up and filtered to that arcade, because a person who
    tapped "People you follow" on KOKO was asking about KOKO, not about the
    city. Anything that brings you here on its own terms starts on the map. */
-function Now({ venueId, onClearVenue, onSeeOpen, presenceHint, ...rest }) {
+function Now({ venueId, onClearVenue, onSeeOpen, ...rest }) {
   /* Null until the person has opened or closed the sheet themselves; until
      then a venue filter is what decides, so arriving from an arcade page
      lands on the list. */
@@ -268,7 +265,6 @@ function Now({ venueId, onClearVenue, onSeeOpen, presenceHint, ...rest }) {
   return (
     <FriendsMap
       {...rest}
-      emptyHint={presenceHint}
       listOpen={listOpen}
       listTitle={
         venue
@@ -283,7 +279,6 @@ function Now({ venueId, onClearVenue, onSeeOpen, presenceHint, ...rest }) {
       list={
         <HereNow
           {...rest}
-          presenceHint={presenceHint}
           venueId={venueId}
           /* Widening the list from one arcade to all of them is still the
              list, so the sheet stays up once the filter it was opened on is
@@ -317,7 +312,6 @@ function HereNow({
   rawArcades = [],
   game,
   present,
-  presenceHint = null,
   venueId,
   joinsSent,
   onClearVenue,
@@ -358,9 +352,6 @@ function HereNow({
           <p className="text-sm font-medium text-ink">
             Nobody out {venue ? `at ${venue.short}` : ''} right now
           </p>
-          {presenceHint && (
-            <p className="mt-1 text-xs text-ink-muted">{presenceHint}</p>
-          )}
           <QuietAction className="mt-2" onClick={onSeeOpen}>
             See open sessions
           </QuietAction>

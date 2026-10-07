@@ -30,14 +30,8 @@ export default function BlockPerson({ handle, hue = null, onConfirm, onCancel })
         <div className="p-4">
           <div className="flex items-center gap-3">
             <Avatar handle={handle} hue={hue} size={44} />
-            <p className="min-w-0 flex-1 text-sm leading-relaxed text-ink">
-              {handle} won’t be able to message you or send you requests, and
-              you’ll stop following each other. They aren’t told.
-            </p>
+            <p className="min-w-0 flex-1 text-sm text-ink-muted">They won’t be told</p>
           </div>
-          <p className="mt-3 text-xs leading-relaxed text-ink-muted">
-            You can unblock them later from their profile.
-          </p>
 
           <div aria-live="polite">
             {error && (

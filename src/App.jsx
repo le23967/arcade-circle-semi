@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { ARCADES, QUEUE_AHEAD, DEFAULT_GAME } from './data.js'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ARCADES, QUEUE_AHEAD, DEFAULT_GAME, gameColor, gameLabel } from './data.js'
 import {
   estimateWaitMin,
   venueGame,
@@ -7,10 +7,13 @@ import {
   otherGamesAt,
   withParty,
   withoutParty,
+  workingCabinetsOf,
 } from './lib/queue.js'
 import { reportIssue, markWorking } from './lib/machines.js'
+import { takeCheckInLink, clearCheckInLink } from './lib/pendingCheckIn.js'
 import { Frame, TabBar, SessionBanner, TAB_IDS, tabLabel } from './components/Frame.jsx'
 import { PrimaryButton, SecondaryButton, AlertBanner, Avatar } from './components/ui.jsx'
+import { Qr } from './components/Icons.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 
 import Arcades from './screens/Arcades.jsx'
@@ -69,6 +72,10 @@ import {
    42 minutes the sketch shows, and still counts up in real time from there. */
 const DEMO_SESSION_OFFSET_MIN = 42
 
+/* How long a check-in link waits for your own check-in to be read back
+   before it is used anyway. See the arrival effect in Prototype. */
+const LINK_WAIT_MS = 5000
+
 /* The gate.
 
    Who you are is decided before anything else renders. While the stored
@@ -82,14 +89,28 @@ const DEMO_SESSION_OFFSET_MIN = 42
    The welcome screen is shown once per page load to people who are not
    signed in. It is not stored anywhere, so a field-study participant on a
    fresh reload always starts there; a returning account holder never sees it
-   because their session is restored first. */
+   because their session is restored first.
+
+   The exception is a page opened by a check-in link: a code scanned with
+   the phone's own camera, or an NFC tag tapped while the app was closed.
+   The link already names the game, which is the one thing the welcome
+   screen asks, so it goes straight to signing in, with the queue it will
+   join named at the top. Signed in, the link is used the moment the
+   prototype has your check-in state; see the arrival effect there. */
 export default function App() {
   const auth = useAuth()
-  const [entered, setEntered] = useState(false)
+  const [link, setLink] = useState(takeCheckInLink)
+  const joining = link && link.status !== 'unknown' ? link : null
+  const [entered, setEntered] = useState(() => Boolean(joining))
   /* Only offered when Supabase is not configured, so the prototype can still
      be walked through on a machine without the two env values. */
   const [guest, setGuest] = useState(false)
-  const [game, setGame] = useState(DEFAULT_GAME)
+  const [game, setGame] = useState(() => (link?.status === 'ok' ? link.gameId : DEFAULT_GAME))
+  /* Used, or turned down on the sign-in screen: gone either way. */
+  const dropLink = useCallback(() => {
+    clearCheckInLink()
+    setLink(null)
+  }, [])
 
   if (auth.status === 'checking') {
     return (
@@ -116,12 +137,32 @@ export default function App() {
           onSignUp={auth.signUp}
           onBack={() => setEntered(false)}
           onGuest={auth.configured ? null : () => setGuest(true)}
+          joining={joining ? joiningLabel(joining) : null}
+          onCancelJoining={dropLink}
         />
       </Frame>
     )
   }
 
-  return <Prototype key={auth.user?.id ?? 'guest'} auth={auth} initialGame={game} />
+  return (
+    <Prototype
+      key={auth.user?.id ?? 'guest'}
+      auth={auth}
+      initialGame={game}
+      link={link}
+      onLinkUsed={dropLink}
+    />
+  )
+}
+
+/* The queue a check-in link will join, as the sign-in screen names it. */
+function joiningLabel(link) {
+  const arcade = ARCADES.find((a) => a.id === link.venueId)
+  return {
+    venue: arcade?.short ?? link.venueId,
+    game: link.status === 'ok' ? gameLabel(link.gameId) : null,
+    color: link.status === 'ok' ? gameColor(link.gameId) : null,
+  }
 }
 
 function Splash({ text }) {
@@ -134,8 +175,11 @@ function Splash({ text }) {
   )
 }
 
-function Prototype({ auth, initialGame }) {
+function Prototype({ auth, initialGame, link = null, onLinkUsed }) {
   const [arcades, setArcades] = useState(ARCADES)
+  /* A check-in link that named nothing this app knows, said once. */
+  const [linkProblem, setLinkProblem] = useState(false)
+  const closeLinkProblem = useCallback(() => setLinkProblem(false), [])
   const [tab, setTab] = useState(TAB_IDS[0])
   const [view, setView] = useState(TAB_IDS[0])
   const [arcadeView, setArcadeView] = useState('list')
@@ -261,16 +305,6 @@ function Prototype({ auth, initialGame }) {
     () => (myId ? presence.present : presentFriends(followingHandles)),
     [myId, presence.present, followingHandles]
   )
-  /* Why the map may be empty, said once, where the emptiness is. */
-  const mutualCount = useMemo(() => {
-    const followerIds = new Set(follows.followers.map((p) => p.id))
-    return follows.following.filter((p) => followerIds.has(p.id)).length
-  }, [follows.following, follows.followers])
-  const presenceHint = !myId
-    ? null
-    : mutualCount === 0
-      ? 'Follow someone who follows you back to see them here.'
-      : null
   /* Whether to raise a system notification for a message that arrives
      while the app is in the background. Off until the person turns it on,
      which is when the browser asks them. */
@@ -737,7 +771,9 @@ function Prototype({ auth, initialGame }) {
     setView('checkin')
   }
 
-  /* Joining puts you in the queue straight away.
+  /* Joining puts you in the queue straight away, from every way in: a scan
+     or a tap inside the app, a link the phone opened from a sticker or a
+     tag, or manual check-in.
 
      A QR scan or NFC tap is the physical proof that you are at the machine,
      so it joins you on the current count with nothing to fill in (finding
@@ -747,11 +783,34 @@ function Prototype({ auth, initialGame }) {
      just confirmed the count, so `counted` replaces it and the age resets.
 
      You are added as one party, solo or pair, and the session remembers
-     which, so leaving takes back exactly that. */
-  function joinQueue({ counted = null } = {}) {
-    const target = arcade
-    const party = joinChoice.party
-    const shared = joinChoice.share ?? visible
+     which, so leaving takes back exactly that.
+
+     Two cases are not a new place in the line. Scanning the queue you are
+     already in - the tag on the machine is the quickest way back to your
+     place - opens it rather than putting you at the back of it a second
+     time. Scanning a different one moves you: you can only stand at one
+     machine, so the old place is given back first, the same way leaving
+     gives it back. And a game with nothing working has no queue to join,
+     so its arcade page opens instead, where the reason is shown. */
+  function joinAt(
+    target,
+    { counted = null, party = joinChoice.party, share = joinChoice.share } = {}
+  ) {
+    setModal(null)
+    setTab('arcades')
+    setActiveId(target.id)
+    setGame(target.gameId)
+    if (session && session.arcadeId === target.id && session.gameId === target.gameId) {
+      goRoot('checkedin')
+      return
+    }
+    if (workingCabinetsOf(target) === 0) {
+      goRoot('detail')
+      return
+    }
+    if (session) releaseQueueSlot()
+
+    const shared = share ?? visible
     const base = counted ?? { queue: target.queue, solo: target.solo }
     const position = base.queue + 1
 
@@ -775,8 +834,85 @@ function Prototype({ auth, initialGame }) {
        made without sharing. Either way you count in the queue. */
     presence.checkIn({ venueId: target.id, gameId: target.gameId, position, visible: shared })
     playSound('success')
-    setTab('arcades')
     goRoot('checkedin')
+  }
+
+  /* A code read inside the app. The screen it was read on named a queue,
+     but the code is where the person is actually standing, so it wins;
+     the scan screen has already asked when the two differ. */
+  function joinScanned(code) {
+    const raw = arcades.find((a) => a.id === code?.venueId)
+    if (!raw || !Object.hasOwn(raw.games, code.gameId)) return
+    joinAt(venueGame(raw, code.gameId))
+  }
+
+  /* Arriving on a check-in link: the phone's camera read a printed code,
+     or its NFC reader a tag, and opened the app on it.
+
+     Nothing was asked on the way in, so the join is solo and shared the
+     way Me says - the queue screen offers Pair for the people who came
+     together. A link that names an arcade but no game it runs opens that
+     arcade, where the game can be picked; one that names nothing is said
+     once, over the list of arcades to pick from instead. */
+  function arriveByLink(arrival) {
+    if (arrival.status === 'unknown') {
+      setLinkProblem(true)
+      goTab('arcades')
+      return
+    }
+    const raw = arcades.find((a) => a.id === arrival.venueId)
+    if (!raw) return
+    if (arrival.status === 'ok') {
+      joinAt(venueGame(raw, arrival.gameId), { party: 'solo', share: null })
+      return
+    }
+    const gameId = Object.hasOwn(raw.games, game) ? game : Object.keys(raw.games)[0]
+    setGame(gameId)
+    setActiveId(raw.id)
+    setModal(null)
+    setTab('arcades')
+    goRoot('detail')
+  }
+
+  /* The link is used once the app knows whether you are already in a
+     queue, which for an account means once your check-in has been read
+     back from the server - used any sooner, tapping the tag again to see
+     your place would put you at the back. A connection that never answers
+     must not hold the person at the machine either, so after a few seconds
+     the link is used anyway. A link that joins nothing - an arcade only,
+     or a code nobody knows - has no reason to wait. The handler runs on
+     the next tick and reads the latest version of itself through a ref,
+     so a render in between neither runs it twice nor runs a stale copy. */
+  const linkReady = !myId || !presence.loading || link?.status !== 'ok'
+  const arriveRef = useRef(null)
+  useEffect(() => {
+    arriveRef.current = arriveByLink
+  })
+  useEffect(() => {
+    if (!link) return undefined
+    const timer = window.setTimeout(
+      () => {
+        onLinkUsed?.()
+        arriveRef.current?.(link)
+      },
+      linkReady ? 0 : LINK_WAIT_MS
+    )
+    return () => window.clearTimeout(timer)
+  }, [link, linkReady, onLinkUsed])
+
+  /* Solo or pair, changed after joining. A link or a tag joins you as one
+     player, because nothing asked; two people who came together say so
+     here, and the count changes by exactly the difference. Your place in
+     the line does not move. */
+  function changeParty(next) {
+    if (!ownSession?.party || ownSession.party === next) return
+    const target = venueGame(
+      arcades.find((a) => a.id === ownSession.arcadeId),
+      ownSession.gameId
+    )
+    if (!target) return
+    patchVenueGame(target.id, target.gameId, withParty(withoutParty(target, ownSession.party), next))
+    setOwnSession((s) => (s ? { ...s, party: next } : s))
   }
 
   /* Both ways out of a queue hand the slot back, so both go through here.
@@ -891,6 +1027,16 @@ function Prototype({ auth, initialGame }) {
       : 'mutual friends'
     : null
 
+  /* A link is joining a queue: say that, rather than drawing the map for
+     the moment it takes to read your check-in back and then jumping. */
+  if (link?.status === 'ok') {
+    return (
+      <Frame>
+        <Splash text="Joining queue…" />
+      </Frame>
+    )
+  }
+
   return (
     <Frame>
       <div className="relative flex h-full flex-col">
@@ -980,7 +1126,6 @@ function Prototype({ auth, initialGame }) {
               me={me}
               following={followingHandles}
               present={present}
-              presenceHint={presenceHint}
               joinsSent={joinsSent}
               planned={planned}
               rsvps={rsvps}
@@ -1022,7 +1167,7 @@ function Prototype({ auth, initialGame }) {
               handle={chat.handle}
               messages={[]}
               mode="closed"
-              closedNote={`${chat.handle} can’t receive messages.`}
+              closedNote="Messaging unavailable"
               onOpenProfile={() => openPlayer(chat.handle)}
               onBack={leaveToTab}
               backLabel={`Back to ${tabLabel(backTab)}`}
@@ -1207,7 +1352,8 @@ function Prototype({ auth, initialGame }) {
               method={scanMethod}
               party={joinChoice.party}
               onBack={() => setView('checkin')}
-              onSuccess={() => joinQueue()}
+              onJoin={joinScanned}
+              onManual={() => setView('confirm')}
             />
           )}
 
@@ -1218,7 +1364,7 @@ function Prototype({ auth, initialGame }) {
               arcade={arcade}
               party={joinChoice.party}
               onBack={() => setView('checkin')}
-              onConfirm={(counted) => joinQueue({ counted })}
+              onConfirm={(counted) => joinAt(arcade, { counted })}
             />
           )}
 
@@ -1234,6 +1380,7 @@ function Prototype({ auth, initialGame }) {
                 solo: Math.min(sessionArcade.solo, session.position - 1),
               })}
               party={session.party}
+              onParty={session.party ? changeParty : null}
               shared={session.shared}
               audienceLabel={audienceLabel}
               turnUp={turnUp}
@@ -1307,6 +1454,8 @@ function Prototype({ auth, initialGame }) {
             onClear={inbox.clearIncoming}
           />
         )}
+
+        {linkProblem && <LinkProblem onClose={closeLinkProblem} />}
 
         {sheetOpen && (
           <Messages
@@ -1402,7 +1551,6 @@ function Prototype({ auth, initialGame }) {
         {modal === 'checkout' && sessionArcade && (
           <QueueExitSheet
             title={`Finished at ${sessionArcade.short}?`}
-            detail="Frees your machine and saves the session."
             confirmLabel="Check out"
             onCancel={() => setModal(null)}
             onConfirm={doCheckOut}
@@ -1412,7 +1560,6 @@ function Prototype({ auth, initialGame }) {
         {modal === 'leavequeue' && sessionArcade && session && (
           <QueueExitSheet
             title={`Leave the queue at ${sessionArcade.short}?`}
-            detail={`You give up #${session.position}.`}
             confirmLabel="Leave queue"
             onCancel={() => setModal(null)}
             onConfirm={leaveQueue}
@@ -1474,7 +1621,7 @@ function RealThread({
       messages={thread.messages}
       mode={thread.mode}
       subtitle={subtitle}
-      closedNote={thread.mode === 'closed' ? 'You can’t message this person.' : ''}
+      closedNote={thread.mode === 'closed' ? 'Messaging unavailable' : ''}
       loading={thread.loading}
       error={thread.error}
       sending={thread.sending}
@@ -1563,6 +1710,32 @@ function IncomingAlert({ incoming, threads, suppressed, viewingPartnerId, alerts
   )
 }
 
+/* A check-in link that named nothing this app knows - a tag written with a
+   typo, a code from an old print. Said once, over the list of arcades it
+   leaves you on, and gone by itself after a few seconds: there is nothing
+   to do about it here except pick the arcade by hand. */
+function LinkProblem({ onClose }) {
+  useEffect(() => {
+    const timer = window.setTimeout(onClose, 6000)
+    return () => window.clearTimeout(timer)
+  }, [onClose])
+
+  return (
+    <AlertBanner
+      avatar={
+        <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-stale-bg text-stale">
+          <Qr size={18} />
+        </span>
+      }
+      title="Code not recognised"
+      text="Pick the arcade instead"
+      openLabel="Dismiss"
+      onOpen={onClose}
+      onClose={onClose}
+    />
+  )
+}
+
 /* SCREEN 7 - confirming a way out of the queue.
 
    Both exits give the slot back, so both ask first. They are not the same
@@ -1577,7 +1750,7 @@ function QueueExitSheet({ title, detail, confirmLabel, onCancel, onConfirm }) {
         <h2 className="font-display text-base font-semibold text-ink">
           {title}
         </h2>
-        <p className="mt-1 text-xs leading-relaxed text-ink-muted">{detail}</p>
+        {detail && <p className="mt-1 text-xs text-ink-muted">{detail}</p>}
         <div className="mt-4 space-y-2">
           <PrimaryButton onClick={onConfirm}>{confirmLabel}</PrimaryButton>
           <SecondaryButton onClick={onCancel}>Cancel</SecondaryButton>

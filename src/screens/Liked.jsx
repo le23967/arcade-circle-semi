@@ -32,11 +32,7 @@ export default function Liked({ likedIds, onBack, onOpenClip }) {
         title="Liked clips"
         onBack={onBack}
         right={
-          <Info>
-            Liking a clip is the one reply that needs no words, which matters
-            for players who would rather not start a conversation. Your likes
-            are visible to the person who posted.
-          </Info>
+          <Info>The person who posted sees your like.</Info>
         }
       />
 
@@ -45,10 +41,6 @@ export default function Liked({ likedIds, onBack, onOpenClip }) {
           <div className="flex h-full flex-col items-center justify-center px-8 text-center">
             <p className="font-display text-base font-semibold text-ink">
               Nothing liked yet
-            </p>
-            <p className="mt-1 text-sm text-ink-muted">
-              Tap the heart on a clip, from Activity or while you wait in a
-              queue, and it lands here.
             </p>
           </div>
         ) : (

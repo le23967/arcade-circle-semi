@@ -41,11 +41,7 @@ export default function DeleteAccount({ handle, onConfirm, onCancel }) {
           }}
           className="p-4"
         >
-          <p className="text-sm leading-relaxed text-ink">
-            Your profile, follows, private conversations and account data will be
-            permanently removed.
-          </p>
-          <p className="mt-2 text-sm font-semibold text-ink">This can’t be undone.</p>
+          <p className="text-sm font-semibold text-live">Permanent</p>
 
           <label
             htmlFor="delete-confirm"
@@ -69,7 +65,7 @@ export default function DeleteAccount({ handle, onConfirm, onCancel }) {
             className="min-h-[44px] w-full rounded-xl border border-line-strong px-3 py-2.5 text-sm text-ink outline-none transition-colors duration-150 focus:border-brand-500"
           />
           <p id="delete-confirm-hint" className="mt-1.5 text-xs text-ink-muted">
-            Your username is {handle}.
+            {handle}
           </p>
 
           <div aria-live="polite">

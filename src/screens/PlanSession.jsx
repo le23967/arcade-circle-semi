@@ -269,9 +269,6 @@ export default function PlanSession({
           <p className="mt-1 text-sm text-ink-muted">
             {arcade?.short} &middot; {formatWhen(when, now)}
           </p>
-          <p className="mt-1 text-xs text-ink-subtle">
-            {open ? 'Open to anyone · ' : ''}Change it any time in Plans
-          </p>
 
           {/* Who it actually reached. A message is the only thing that
               leaves this phone, so that is what is reported. */}
@@ -461,18 +458,13 @@ export default function PlanSession({
                 : searching
                   ? 'Searching…'
                   : results.length === 0
-                    ? `No account matches “${trimmed}”.`
-                    : `${results.length} ${results.length === 1 ? 'account' : 'accounts'} matching “${trimmed}”`}
-            </p>
-          )}
-          {trimmed === '' && myId && following.length === 0 && (
-            <p className="mt-2 text-xs leading-relaxed text-ink-muted">
-              Search a username to ask someone.
+                    ? `No match for “${trimmed}”`
+                    : `${results.length} ${results.length === 1 ? 'match' : 'matches'}`}
             </p>
           )}
           {trimmed === '' && !myId && (
-            <p className="mt-2 text-xs leading-relaxed text-ink-muted">
-              Asking people needs an account.
+            <p className="mt-2 text-xs text-ink-muted">
+              Sign in to ask people
             </p>
           )}
 
@@ -543,8 +535,8 @@ export default function PlanSession({
               ? 'Save changes'
               : open
                 ? invited.length > 0
-                  ? `Post it open and ask ${invited.length}`
-                  : 'Post it open to anyone'
+                  ? `Post and ask ${invited.length}`
+                  : 'Post'
                 : `Send to ${invited.length}`}
         </PrimaryButton>
         <SecondaryButton onClick={onBack}>Cancel</SecondaryButton>

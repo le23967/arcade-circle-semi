@@ -51,7 +51,10 @@ function audio() {
   const Ctor = window.AudioContext || window.webkitAudioContext
   if (!Ctor) return null
   if (!ctx) ctx = new Ctor()
-  if (ctx.state === 'suspended') ctx.resume()
+  /* A queue joined from a check-in link plays its cue as the page opens,
+     before anything has been tapped, and some browsers refuse to resume
+     then. That is a silent join, not an error. */
+  if (ctx.state === 'suspended') ctx.resume()?.catch?.(() => {})
   return ctx
 }
 

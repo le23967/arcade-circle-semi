@@ -67,6 +67,11 @@ said *"with a QR code"*, or tapping your phone.
 So check-in is ordered QR, then NFC, then Manual. Manual is clearly marked as a
 fallback for a broken sticker or a phone without NFC.
 
+Both are real now. The sticker on a machine and the NFC tag beside it hold the
+same ordinary link, so a player can scan it with the phone's own camera or tap
+it with the app closed, and land in the queue already joined. See
+[Check-in codes and NFC tags](#check-in-codes-and-nfc-tags).
+
 ### 5. The queue counts parties, not people
 
 Players who came together queue together. One interviewee explained that at a
@@ -264,9 +269,10 @@ Sources: [SEGA maimai DX location finder](https://location.am-all.net/alm/locati
 | Arcades, Best now and Compare all | tab | Recommends the quickest venue, then shows wait, report age, working machines and distance for every venue. |
 | Detail | `detail` | The wait, three status chips and Check in & join queue; queue, machine reports, people, open sessions and other games below, each shut until opened. |
 | Check-In | `checkin` | Solo or partner, sharing on or off, then Scan QR, Tap NFC, or Manual as a fallback. |
-| Scan | `scan` | QR viewfinder or NFC prompt; the button stands in for the read. |
+| Scan | `scan` | The back camera reads the sticker, or Web NFC reads the tag on Android; a code for a different queue asks first. |
 | Confirm | `confirm` | Manual check-in: pre-filled count to confirm or correct before joining. |
-| Checked In | `checkedin` | Your position, the running order, and Leave queue or Check out. |
+| Checked In | `checkedin` | Your position, the running order, Solo or Pair, and Leave queue or Check out. |
+| Check-in codes | `/print.html` | The QR stickers to print, one per game at each arcade or one per machine, each with its link for NFC Tools. Not linked from the app. |
 | Session summary | `summary` | Session time and time queued. |
 | Plan a session | `plan` | Venue, game, time, who can come, and who to ask. |
 | Messages | sheet | Chats and requests over the tab they were opened from, with what is waiting counted on the way in. |
@@ -312,6 +318,74 @@ map of friends and venues belongs with the community tools in Circle. Route
 planning still hands off to the phone, where live traffic and transit data are
 available.
 
+## Check-in codes and NFC tags
+
+Every queue has one link, and the QR sticker and the NFC tag for it hold the
+same one:
+
+```
+https://arcade-circle.vercel.app/?checkin=koko-town-hall&game=maimai
+```
+
+It is a plain https link because that is what phones already open without any
+app running: the iPhone and Android cameras, and both systems' own NFC readers.
+When the app opens on one it joins that queue with the account signed in to the
+browser, then takes the link out of the address bar so a reload does not join
+again.
+
+- Signed in: straight into the queue, solo, shared the way Me says. Pair is one
+  tap on the queue screen for two people who came together.
+- Already in that queue: it shows your place instead of putting you at the back.
+  The tag doubles as the quickest way back to your position.
+- In another queue: you are moved, and the old place is given back.
+- Signed out: the sign-in screen names the queue, and it joins as soon as you
+  are in. The link survives a reload while you look for a password.
+- A game with no working machines opens the arcade page, which says why. A link
+  the app does not recognise says so once.
+
+Inside the app, Scan QR uses the back camera, and Tap NFC uses Web NFC, which
+today means Chrome on Android. A code for a different queue than the screen
+shows asks before joining it, since two games often stand side by side. iPhones
+read the tag themselves (iPhone XS and later) and offer the link as a
+notification.
+
+### Printing the stickers
+
+Open `/print.html`: https://arcade-circle.vercel.app/print.html once deployed,
+or http://localhost:5173/print.html under `npm run dev`. The codes always point
+at the production address, wherever the page is opened. Pick the games, choose
+one sticker per game or one per machine, and print on A4 at 100% scale. Each
+sticker prints its link underneath. Add `?base=https://another-host` to make
+codes for a different deployment; the page says so in its header.
+
+### Writing the NFC tags with NFC Tools
+
+1. Open NFC Tools, then **Write → Add a record → URL / URI**.
+2. Paste the link from the sticker or from the print page's Copy link button.
+   If the field already shows `https://` in front, paste only the part after
+   it, or the tag will hold `https://https://…`.
+3. **Write**, and hold the tag to the phone until it finishes.
+4. Check it in **Read**: one URI record holding exactly the link. Then tap it
+   with a phone where it will be mounted.
+5. Optional: **Other → Set password** stops anyone rewriting it and can be
+   removed later. **Lock** is permanent.
+
+Arcade machines are metal, which stops ordinary tags working. Use on-metal
+(ferrite-backed) NTAG213 tags on the machine itself, or mount a plain tag on
+plastic or glass away from it.
+
+### Limits
+
+- A tag or a code always opens the browser, never a copy of the app added to
+  an iPhone Home Screen, and the two keep separate sign-ins. A player signed in
+  only there signs in once in Safari; the check-in waits for them.
+- On iPhone, use the Camera app. The Control Centre code scanner opens links in
+  a private view with no sign-in.
+- iPhone 7, 8 and X cannot read tags without a native app, so put the QR code
+  next to every tag.
+- A link is no stronger than the sticker it is printed on. The scan stands in
+  for being at the machine; the prototype does not pretend it proves it.
+
 ## Fidelity
 
 The current pass adds enough visual detail to test the experience, not only the
@@ -342,8 +416,11 @@ the next action.
 | `src/social.js` | People, clips, activity, planned sessions |
 | `src/lib/queue.js` | Wait model, staleness, queue roster, venue resolvers |
 | `src/lib/social.js` | Leaderboard, presence, follows, formatting |
+| `src/lib/checkinLink.js` | Check-in links: built for the stickers, read from a scan or a tag |
+| `src/lib/pendingCheckIn.js` | Holds the link a page was opened with until it is used |
 | `src/components/ui.jsx` | Shared primitives |
 | `src/screens/` | One file per screen |
+| `src/print/` | The printable sheet of check-in codes |
 
 Reporting a queue or checking in changes the shared state, so the list, the
 compare table and the detail screen all move together.

@@ -74,9 +74,6 @@ export default function Comments({ clip, comments, onPost, onClose }) {
           {comments.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center px-6 text-center">
               <p className="text-sm font-semibold text-ink">No comments yet</p>
-              <p className="mt-1 text-xs text-ink-muted">
-                Say something about @{clip.handle}&rsquo;s run.
-              </p>
             </div>
           ) : (
             <ul className="py-1">

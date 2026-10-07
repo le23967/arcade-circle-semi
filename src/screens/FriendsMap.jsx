@@ -229,9 +229,6 @@ export default function FriendsMap({
   /* Who is out, already scoped to the people allowed to see you and whom
      you are allowed to see. */
   present = [],
-  /* One line for the card when nobody is out, when there is something
-     worth saying about why. */
-  emptyHint = null,
   joinsSent,
   listOpen = false,
   listTitle = null,
@@ -487,7 +484,7 @@ export default function FriendsMap({
             onClose={() => setSelected(null)}
           />
         ) : (
-          <SummaryCard friends={here} arcades={arcades} onOpenList={onOpenList} emptyHint={emptyHint} />
+          <SummaryCard friends={here} arcades={arcades} onOpenList={onOpenList} />
         )}
       </div>
       )}
@@ -555,7 +552,7 @@ function Card({ children }) {
   )
 }
 
-function SummaryCard({ friends, arcades, onOpenList, emptyHint = null }) {
+function SummaryCard({ friends, arcades, onOpenList }) {
   /* Which venues, in the order the map shows them, so the line under the
      count says where without listing anyone twice. */
   const venues = arcades.filter((a) => friends.some((p) => p.at === a.id))
@@ -573,13 +570,15 @@ function SummaryCard({ friends, arcades, onOpenList, emptyHint = null }) {
         </span>
         <span className="min-w-0 flex-1">
           <span className="block font-display text-sm font-semibold text-ink">
-            {friends.length} {friends.length === 1 ? 'friend is' : 'friends are'} out
+            {friends.length === 0
+              ? 'Nobody out right now'
+              : `${friends.length} ${friends.length === 1 ? 'friend is' : 'friends are'} out`}
           </span>
-          <span className="block truncate text-[11px] text-ink-muted">
-            {venues.length > 0
-              ? venues.map((a) => a.short).join(' · ')
-              : emptyHint || 'Nobody out right now'}
-          </span>
+          {venues.length > 0 && (
+            <span className="block truncate text-[11px] text-ink-muted">
+              {venues.map((a) => a.short).join(' · ')}
+            </span>
+          )}
         </span>
         <span className="text-xs font-semibold text-brand-600">List</span>
         <span className="-rotate-90 text-ink-muted">

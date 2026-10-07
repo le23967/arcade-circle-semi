@@ -254,7 +254,6 @@ function BestNowView({ arcades, game, without, onOpen, following, favourites }) 
           <p className="font-display text-base font-semibold text-ink">
             No {gameLabel(game)} nearby
           </p>
-          <p className="mt-1 text-xs text-ink-muted">Try another game.</p>
         </div>
       </Body>
     )
@@ -338,14 +337,11 @@ function BestNowView({ arcades, game, without, onOpen, following, favourites }) 
    a number nobody can vouch for. */
 function NoBest() {
   return (
-    <div role="status" className="flex items-start gap-3 rounded-3xl border border-line bg-surface p-4 shadow-sm">
-      <span className="mt-0.5 flex-none text-stale">
+    <div role="status" className="flex items-center gap-3 rounded-3xl border border-line bg-surface p-4 shadow-sm">
+      <span className="flex-none text-stale">
         <Alert size={20} />
       </span>
-      <div>
-        <p className="font-display text-base font-semibold text-ink">No confirmed fastest</p>
-        <p className="mt-0.5 text-xs text-ink-muted">Reports are stale or machines are down.</p>
-      </div>
+      <p className="font-display text-base font-semibold text-ink">No confirmed fastest</p>
     </div>
   )
 }
@@ -531,9 +527,6 @@ function SearchResults({ query, arcades, allArcades, game, onOpen, following, fa
         <div role="status" className="rounded-2xl border border-line bg-surface p-4 text-center shadow-sm">
           <p className="font-display text-sm font-semibold text-ink">
             No {gameLabel(game)} arcade matches &ldquo;{query}&rdquo;
-          </p>
-          <p className="mt-1 text-xs text-ink-muted">
-            Try {allArcades.map((a) => a.short).join(', ')}
           </p>
         </div>
       )}

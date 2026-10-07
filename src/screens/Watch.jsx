@@ -237,9 +237,6 @@ export default function Watch({
           <div className="flex h-full items-center justify-center p-6 text-center">
             <div>
               <p className="font-display text-lg font-semibold text-white">No clips here yet</p>
-              <p className="mt-1 text-sm text-white/60">
-                Swipe across for clips from your circle.
-              </p>
             </div>
           </div>
         ) : (
@@ -323,19 +320,15 @@ export default function Watch({
           <button
             type="button"
             onClick={onCall}
+            aria-label={`Queue #${session.position} at ${sessionArcade.short}. Preview your turn alert`}
             className="absolute inset-x-3 bottom-3 z-30 flex items-center gap-2 rounded-2xl border border-white/15 bg-black/45 px-3 py-2 text-left backdrop-blur-md"
           >
             <span className="relative flex h-7 w-7 flex-none items-center justify-center rounded-full bg-brand-600 text-white">
               <span className="anim-ring absolute h-2 w-2 rounded-full bg-brand-400" />
               <Bell size={14} />
             </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-xs font-semibold text-white">
-                Queue #{session.position} at {sessionArcade.short}
-              </span>
-              <span className="block text-[10px] text-white/60">
-                Tap to preview your turn alert
-              </span>
+            <span className="min-w-0 flex-1 truncate text-xs font-semibold text-white">
+              #{session.position} &middot; {sessionArcade.short}
             </span>
           </button>
         )}
@@ -544,7 +537,7 @@ function StageAction({ children, onClick, active, label, ...rest }) {
 function YoureUp({ arcade, position, onGo }) {
   return (
     <Screen>
-      <TopBar title="Watch" subtitle="Your clip has been paused" />
+      <TopBar title="Watch" />
       <Body className="flex flex-col items-center justify-center bg-brand-50 p-6 text-center">
         <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-brand-600 text-white shadow-xl shadow-brand-600/25">
           <span className="anim-ring absolute h-5 w-5 rounded-full bg-brand-400" />
@@ -553,10 +546,9 @@ function YoureUp({ arcade, position, onGo }) {
         <p className="mt-5 font-display text-3xl font-bold tracking-tight text-ink">
           You&rsquo;re up
         </p>
-        <p className="mt-2 text-sm text-ink-muted">
-          Position #{position} at <span className="font-semibold text-ink">{arcade.name}</span>
+        <p className="mt-2 text-sm tabular-nums text-ink-muted">
+          #{position} &middot; <span className="font-semibold text-ink">{arcade.short}</span>
         </p>
-        <p className="mt-1 text-xs text-ink-muted">The clip is paused so you can take your turn.</p>
         <div className="mt-6 w-full">
           <PrimaryButton onClick={onGo}>Open my queue</PrimaryButton>
         </div>

@@ -53,6 +53,10 @@ export default function CheckedIn({
   /* 'solo' or 'pair' when you joined on this phone; null when the check-in
      came back from another one. */
   party = null,
+  /* Switches it after the fact. A code scanned with the phone's own camera,
+     or a tag tapped with the app closed, joins as one player because
+     nothing asked, so the two who came together say so here. */
+  onParty = null,
   shared = true,
   audienceLabel = null,
   turnUp = false,
@@ -129,11 +133,14 @@ export default function CheckedIn({
             <Stat pill tone={working === 0 ? 'live' : 'default'} label="Machines" icon={<Cabinet size={14} />}>
               {working}/{arcade.cabinets} working
             </Stat>
-            {party && (
-              <Stat pill label="Playing" icon={party === 'pair' ? <Users size={13} /> : <User size={13} />}>
-                {party === 'pair' ? 'Pair' : 'Solo'}
-              </Stat>
-            )}
+            {party &&
+              (onParty ? (
+                <PartySwitch party={party} onParty={onParty} />
+              ) : (
+                <Stat pill label="Playing" icon={party === 'pair' ? <Users size={13} /> : <User size={13} />}>
+                  {party === 'pair' ? 'Pair' : 'Solo'}
+                </Stat>
+              ))}
             {audienceLabel && (
               <Stat pill label="Check-in" icon={<Shield size={13} />}>
                 {shared ? 'Shared' : 'Not shared'}
@@ -192,7 +199,7 @@ export default function CheckedIn({
                 <Play size={16} />
               </span>
               <span className="min-w-0 flex-1 text-sm font-medium text-ink">
-                Watch clips while you wait
+                Watch clips
               </span>
               <Chevron size={16} />
             </button>
@@ -210,6 +217,39 @@ export default function CheckedIn({
         )}
       </div>
     </Screen>
+  )
+}
+
+/* Solo or pair as the chip it was, split in two so either half is a tap.
+   The halves are drawn at chip height and pressed through a taller area
+   around them, the same way the distance chip on the arcade page is. */
+const PARTIES = [
+  ['solo', 'Solo', User],
+  ['pair', 'Pair', Users],
+]
+
+function PartySwitch({ party, onParty }) {
+  return (
+    <span role="radiogroup" aria-label="Playing" className="inline-flex rounded-full bg-sunken p-0.5">
+      {PARTIES.map(([id, label, Icon]) => {
+        const on = party === id
+        return (
+          <button
+            key={id}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => onParty(id)}
+            className={`relative inline-flex items-center gap-1 rounded-full px-2.5 py-[3px] text-xs font-medium transition-colors duration-150 ease-soft before:absolute before:inset-x-0 before:-inset-y-2.5 before:content-[''] ${
+              on ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted hover:text-ink'
+            }`}
+          >
+            <Icon size={13} />
+            {label}
+          </button>
+        )
+      })}
+    </span>
   )
 }
 
