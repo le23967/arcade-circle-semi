@@ -229,12 +229,17 @@ function QrReader({ onRead, notCode, onManual, chips }) {
     <>
       <Body className="flex flex-col items-center px-6 pt-8">
         <div className="relative aspect-square w-60 overflow-hidden rounded-3xl bg-ink">
+          {/* The picture is never hidden, only covered. The scanning library
+              reads a hidden video as one the page wants out of sight - Safari
+              stops playing a hidden video - and shrinks it to nothing for
+              good, which left the viewfinder black while the camera ran.
+              Before the camera starts there is no picture to show anyway. */}
           <video
             ref={videoRef}
             muted
             playsInline
             aria-label="Camera preview"
-            className={`h-full w-full object-cover ${scanning ? '' : 'invisible'}`}
+            className="absolute inset-0 h-full w-full object-cover"
           />
           {!scanning && (
             <span className="absolute inset-0 flex items-center justify-center text-white/25" aria-hidden="true">
@@ -247,7 +252,13 @@ function QrReader({ onRead, notCode, onManual, chips }) {
             'bottom-4 left-4 border-b-4 border-l-4 rounded-bl-xl',
             'bottom-4 right-4 border-b-4 border-r-4 rounded-br-xl',
           ].map((c) => (
-            <span key={c} className={`absolute h-10 w-10 border-white ${c}`} aria-hidden="true" />
+            /* A shadow keeps the white corners visible over a bright
+               picture - a sticker filling the frame is mostly white. */
+            <span
+              key={c}
+              className={`absolute h-10 w-10 border-white drop-shadow-[0_0_3px_rgba(0,0,0,0.55)] ${c}`}
+              aria-hidden="true"
+            />
           ))}
           {scanning && (
             <span
