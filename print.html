@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Check-in codes · Arcade Circle</title>
+    <meta name="theme-color" content="#4f46e5" />
+    <link rel="icon" href="/icon-192.png" type="image/png" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- The sheet is A4, and the stickers are measured in millimetres for it:
+         two across and three down, 90 x 88 mm each, inside 10 mm margins.
+         On a laptop each page is drawn as the paper it will print on; on a
+         phone the stickers simply stack, for copying links into NFC Tools.
+         These rules are plain CSS rather than utility classes because the
+         printed page is wider than a phone breakpoint, and the screen layout
+         must never leak into print. Colour is printed as it is drawn, so the
+         brand mark and each game's dot survive a "save ink" default. -->
+    <style>
+      @page {
+        size: A4 portrait;
+        margin: 10mm;
+      }
+      .page {
+        display: grid;
+        grid-template-columns: minmax(0, 90mm);
+        justify-content: center;
+        gap: 16px;
+        margin: 0 auto 16px;
+      }
+      @media screen and (min-width: 640px) {
+        .page {
+          grid-template-columns: 90mm 90mm;
+          column-gap: 10mm;
+          row-gap: 4mm;
+          align-content: start;
+          box-sizing: border-box;
+          width: 210mm;
+          min-height: 297mm;
+          padding: 10mm;
+          margin-bottom: 32px;
+          background: #fff;
+          box-shadow: 0 1px 3px rgb(24 24 27 / 0.12), 0 12px 32px rgb(24 24 27 / 0.08);
+        }
+      }
+      @media print {
+        html,
+        body {
+          background: #fff !important;
+        }
+        .page {
+          grid-template-columns: 90mm 90mm;
+          column-gap: 10mm;
+          row-gap: 4mm;
+          align-content: start;
+          width: auto;
+          min-height: 0;
+          padding: 0;
+          margin: 0;
+          box-shadow: none;
+          break-after: page;
+        }
+        .page:last-child {
+          break-after: auto;
+        }
+      }
+      .sticker,
+      .sticker * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/print/main.jsx"></script>
+  </body>
+</html>

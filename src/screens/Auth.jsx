@@ -6,7 +6,9 @@ import {
   PrimaryButton,
   SecondaryButton,
   Avatar,
+  GameDot,
 } from '../components/ui.jsx'
+import { Close, Qr } from '../components/Icons.jsx'
 import { validateHandle, handleAvailable, describeError } from '../lib/accounts.js'
 
 /* Sign in, or create an account.
@@ -27,7 +29,12 @@ import { validateHandle, handleAvailable, describeError } from '../lib/accounts.
    button a screen-height away from the fields made it read as belonging to
    the page rather than to what had just been typed. What went wrong is said
    in the same place, between the fields and the button that will be tried
-   again. */
+   again.
+
+   Opened from a check-in code or tag, the screen names the queue at the
+   top, because that is what signing in is about to do: the account it
+   signs in to is the one that joins. The cross beside it lets the person
+   sign in without joining. */
 const INPUT =
   'w-full rounded-xl border px-3 py-2.5 text-sm text-ink outline-none transition-colors duration-150 placeholder:text-ink-subtle'
 
@@ -40,6 +47,9 @@ export default function Auth({
   onSignUp,
   onBack,
   onGuest,
+  /* { venue, game, color } from a check-in link, or null. */
+  joining = null,
+  onCancelJoining,
 }) {
   const [mode, setMode] = useState(initialMode)
   const [handle, setHandle] = useState('')
@@ -133,6 +143,8 @@ export default function Auth({
       />
 
       <Body className="bg-sunken">
+        {joining && <Joining {...joining} onCancel={onCancelJoining} />}
+
         <form onSubmit={submit} noValidate aria-busy={busy}>
           {signup && (
             <div className="flex flex-col items-center gap-2 border-b border-line bg-surface px-4 py-5">
@@ -265,6 +277,42 @@ export default function Auth({
         </form>
       </Body>
     </Screen>
+  )
+}
+
+/* The queue a check-in link is waiting to join. */
+function Joining({ venue, game, color, onCancel }) {
+  return (
+    <div className="flex items-center gap-3 border-b border-line bg-brand-50 py-2 pl-4 pr-1.5">
+      <span
+        className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-surface text-brand-700"
+        aria-hidden="true"
+      >
+        <Qr size={18} />
+      </span>
+      <p className="min-w-0 flex-1">
+        <span className="block text-[11px] font-semibold uppercase tracking-wide text-brand-700">
+          {game ? 'Join queue' : 'Open arcade'}
+        </span>
+        <span className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-ink">
+          {color && <GameDot color={color} />}
+          <span className="truncate">
+            {venue}
+            {game && <> &middot; {game}</>}
+          </span>
+        </span>
+      </p>
+      {onCancel && (
+        <button
+          type="button"
+          onClick={onCancel}
+          aria-label={game ? 'Don’t join this queue' : 'Don’t open this arcade'}
+          className="flex h-11 w-11 flex-none items-center justify-center rounded-full text-ink-muted transition-colors duration-150 hover:bg-brand-100 hover:text-ink"
+        >
+          <Close size={18} />
+        </button>
+      )}
+    </div>
   )
 }
 
